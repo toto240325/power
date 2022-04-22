@@ -12,6 +12,7 @@
 # sqlite3 mydatabase.db
 # select time,text from events where categ='power_day' and time<"2022-04-21";
 # select text from events where categ="power_night" and text like '7%';
+# select time, text from events where categ="power_day" and text = "71634" and time = "2022-04-22 15:10:44";
 
 # Import packages
 from audioop import add
@@ -22,7 +23,10 @@ import os
 import pytesseract
 import shlex
 from event import create_event
+from event import read_where
 import datetime
+import mysendmail
+import params
 
 cv = cv2
 
@@ -150,6 +154,56 @@ def check_digits(st):
     return day, night
 
 
+def last_validated_value(categ):
+    """
+    get from the DB the last value of category categ
+    """
+    now1=datetime.datetime.now()
+    nowStr = now1.strftime('%Y-%m-%d %H:%M:%S')
+    res = read_where(categ,1,"")
+    error = res["error"]
+    short_error_msg = ""
+    long_error_msg = ""
+    validated_value = None
+
+    if (error != ""):
+        short_error_msg = "events server unresponsive !!!"
+        long_error_msg(f"!!!! Error : could not read the last {categ} event - {error}")
+
+    # check that date is OK
+    if short_error_msg == "":
+        event = res["events"][0]
+        last_event_date = event["time"]
+        try:
+            last_event_Datetime = datetime.datetime.strptime(last_event_date,'%Y-%m-%d %H:%M:%S')    
+        except Exception as error:
+            short_error_msg = "event date is not a valid date !!!"
+            long_error_msg = f"date of last {categ} is not a date : {last_event_date} ! - {str(error)}"
+            #logging.error(long_error_msg)
+        
+    # then check if the value we got is a valid float
+    if short_error_msg == "":
+        if event["text"].isnumeric:
+            validated_value = float(event["text"])
+        else:
+            validated_value = None
+            short_error_msg = "{categ} value is not a numeric value - {nowStr}"
+            long_error_msg = "{categ} value is not a numeric value"
+
+    if short_error_msg != "":
+        user_name = params.mailer
+        passwd = params.mailer_pw
+        from_email = params.from_email
+        to_email = params.to_email
+        subject = short_error_msg + "- " + nowStr
+        body = long_error_msg
+        htmlbody = None
+        myfilename = None
+        mysendmail.mySend(user_name, passwd, from_email, to_email, subject, body, htmlbody, myfilename)
+
+    return validated_value
+
+
 def get_best_result(candidate_results, img, day_night):
     """
     results is an array of [label_str, result_str] (ex: ["tesseract optimised","743 423"])
@@ -177,12 +231,19 @@ def get_best_result(candidate_results, img, day_night):
             number = int(st)
             # check the read figures make sense (sometimes a "7" is read as a "1" by tesseract)
             if day_night == "day":
-                if number > 71000 and number < 72000:
-                    valid_results.append(st)
+                # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
+                val = last_validated_value("power_day")
+                # if number > 71000 and number < 72000:
+                if val != None:
+                    if number >= val and number <= val+1:
+                        valid_results.append(st)
             else:
-                if number > 65000 and number < 67000:
-                    valid_results.append(st)
-                
+                # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
+                val = last_validated_value("power_night")
+                # if number > 65000 and number < 67000:
+                if val != None:
+                    if number >= val and number <= val+1:
+                        valid_results.append(st)
     
     #remove duplicates from list of valid results
     valid_results = list(dict.fromkeys(valid_results))
@@ -194,7 +255,7 @@ def get_best_result(candidate_results, img, day_night):
     if len(valid_results) == 0:
         # no valid results; store image for later analysis
         number = None
-        print("No valid results !")
+        # print("No valid results !")
         # store image for later analysis :
         filename = issues_path + "noresult_" + now_str + ".jpg"
         cv2.imwrite(filename, img)
@@ -322,7 +383,7 @@ def check_power():
     #---- day ----------
     img = img_day
     candidate_results = []
-    img_name = basename+'_cropped'
+    img_name = basename+'_day_cropped'
     #if interactive: cv2.imshow(img_name, img)
     # save a copy of this plain image for later analysis
     write_gray_to_file(img_name, img)
@@ -341,7 +402,7 @@ def check_power():
 
     # try to optimise the image
     img = optimise_img(img)
-    img_name = basename+'_optimised'
+    img_name = basename+'_day_optimised'
     #if interactive: cv2.imshow(img_name, img)
     # save a copy of this plain image for later analysis
     write_gray_to_file(img_name, img)
@@ -360,7 +421,7 @@ def check_power():
     #---- night ----------
     img = img_night
     candidate_results = []
-    img_name = basename+'_cropped'
+    img_name = basename+'_night_cropped'
     #if interactive: cv2.imshow(img_name, img)
     # save a copy of this plain image for later analysis
     write_gray_to_file(img_name, img)
@@ -379,7 +440,7 @@ def check_power():
 
     # try to optimise the image
     img = optimise_img(img)
-    img_name = basename+'_optimised'
+    img_name = basename+'_night_optimised'
     #if interactive: cv2.imshow(img_name, img)
     # save a copy of this plain image for later analysis
     write_gray_to_file(img_name, img)
@@ -412,10 +473,10 @@ def check_power():
 
 def main():
     day,night = check_power()
-    if day != None:
+    if day != None or night != None:
         print(f'day : {day} - night : {night}')
     else:
-        print("Coudln't read the figures !")
+        print("Couldn't read valid figures !")
 
 interactive = False
 
