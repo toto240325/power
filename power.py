@@ -47,7 +47,8 @@ def get_cam_footage(basename):
     # $ cp chalet-video-H264-1 a.h264
     # $ vlc a.h264
     os.rename(f'{basename}-video-H264-1',f'{basename}.h264')
-
+    os.remove(f'{basename}-audio-PCMA-2')
+    
 
 def get_snapshot(basename):
     """
@@ -64,6 +65,7 @@ def get_snapshot(basename):
     # print("result = ", process.stdout)
     # err = process.stderr
     # print("err = ", process.stderr)
+    os.remove(f'{basename}.h264')
 
 
 def cropped_digits_img(filename):
@@ -303,10 +305,9 @@ def check_power():
     # shlex.split('tesseract -c page_separator="" cropped_chalet.jpg stdout --psm 13')
     options_list = shlex.split(options_str)
 
-    basename = "base"
+    basename = "power_base"
     get_cam_footage("tmp_"+basename)
     get_snapshot("tmp_"+basename)
-
     
     debug = False
     if debug:
@@ -316,6 +317,7 @@ def check_power():
     else:
         filename = "tmp_"+basename+'.jpg'
         img_day,img_night = cropped_digits_img(filename)
+        os.remove(filename)
 
     #---- day ----------
     img = img_day
