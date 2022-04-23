@@ -88,18 +88,17 @@ def cropped_digits_img(filename):
     img = (255-img)
     #if interactive: cv2.imshow("greyed inverted", img)
 
-    calib_x = 802
-    calib_width = 169
-    calib_day_y = 448
-    calib_day_height = 46
+    calib_x = 805
+    calib_width = 170
+    calib_day_y = 445
+    calib_day_height = 47
     calib_night_y = calib_day_y+85
     calib_night_height = 40
-    
 
     #-------------
     # day figures
     # Crop the image to focus on the day digits
-    # img_day = img[445:492, 805:975]
+    #img_day = img[445:492, 805:975]
     img_day = img[calib_day_y:calib_day_y+calib_day_height, calib_x:calib_x+calib_width]
     # if interactive: cv2.imshow("cropped img_day", img_day) #; cv2.waitKey(0)
 
@@ -108,12 +107,12 @@ def cropped_digits_img(filename):
     # print("cv2.THRESH_BINARY : ", cv2.THRESH_BINARY)
 
     # Display cropped image
-    if interactive: cv2.imshow("threshed", img_day); cv2.waitKey(0)
+    # if interactive: cv2.imshow("threshed", img_day); cv2.waitKey(0)
 
     #-------------
     # night figures
     # Crop the image to focus on the day digits
-    # img_night = img[530:570, 805:975]
+    #img_night = img[530:570, 805:975]
     img_night = img[calib_night_y:calib_night_y+calib_night_height, calib_x:calib_x+calib_width]
     # if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
 
@@ -391,6 +390,8 @@ def check_power():
         img_day,img_night = cropped_digits_img(filename)
         os.rename(filename,filename_bak)
         
+    if interactive: print("")
+
     #---- day ----------
     img = img_day
     candidate_results = []
@@ -406,10 +407,10 @@ def check_power():
 
     # extract the figures from this plain image
     res1 = get_digits(img_name, img, options_list)
-    candidate_results.append(["tess. not optimised",res1])
+    candidate_results.append(["day tess. not optimised",res1])
     # if interactive: print("tesseract not optimised : ",res1)
     # if interactive: cv2.imshow("not optimised", img)
-    explain_tesseract(img, "pytess. not optimised", options_str)
+    explain_tesseract(img, "day pytess. not optimised", options_str)
 
     # try to optimise the image
     img = optimise_img(img)
@@ -420,14 +421,14 @@ def check_power():
 
     # extract the figures from this optimised image
     res2 = get_digits(img_name, img, options_list)
-    candidate_results.append(["tess. optimised",res2])
+    candidate_results.append(["day tess. optimised",res2])
     # if interactive: print("tesseract  optimised : ",res1)
     # if interactive: cv2.imshow("optimised", img)
-    explain_tesseract(img, "pytess. optimised", options_str)
-    #print("")
+    explain_tesseract(img, "day pytess. optimised", options_str)
     
     day = get_best_result(candidate_results, img, "day")
     # day = check_digits(res1)
+    if interactive: print("")
 
     #---- night ----------
     img = img_night
@@ -444,10 +445,10 @@ def check_power():
 
     # extract the figures from this plain image
     res1 = get_digits(img_name, img, options_list)
-    candidate_results.append(["tess. not optimised",res1])
+    candidate_results.append(["night tess. not optimised",res1])
     # if interactive: print("tesseract not optimised : ",res1)
     # if interactive: cv2.imshow("not optimised", img)
-    explain_tesseract(img, "pytess. not optimised", options_str)
+    explain_tesseract(img, "night pytess. not optimised", options_str)
 
     # try to optimise the image
     img = optimise_img(img)
@@ -458,13 +459,14 @@ def check_power():
 
     # extract the figures from this optimised image
     res2 = get_digits(img_name, img, options_list)
-    candidate_results.append(["tess. optimised",res2])
+    candidate_results.append(["nigth tess. optimised",res2])
     # if interactive: print("tesseract  optimised : ",res1)
     # if interactive: cv2.imshow("optimised", img)
-    explain_tesseract(img, "pytess. optimised", options_str)
+    explain_tesseract(img, "niht pytess. optimised", options_str)
     #print("")
     
     night = get_best_result(candidate_results, img, "night")
+    if interactive: print("")
     # night = check_digits(res1)
 
     #--------------------------
