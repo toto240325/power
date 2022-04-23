@@ -9,10 +9,10 @@
 # the last one (method 3 on eroded) seems to work the most often, but not always
 
 # cd /opt/db
-# sqlite3 mydatabase.db
+# sqlite3 /opt/db/mydatabase.db
 # select time,text from events where categ='power_day' and time<"2022-04-21";
 # select text from events where categ="power_night" and text like '7%';
-# select time, text from events where categ="power_day" and text = "71634" and time = "2022-04-22 15:10:44";
+# select time, text from events where categ="power_day" and text = "7.9"; # and time = "2022-04-22 15:10:44";
 
 # Import packages
 from audioop import add
@@ -33,7 +33,7 @@ cv = cv2
 # export DISPLAY=localhost:10.0
 
 os.environ["DISPLAY"] = "localhost:10.0"
-print(os.environ["DISPLAY"])
+print(os.environ["DISPLAY"] + " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
 
 def get_cam_footage(basename):
     """
@@ -88,31 +88,41 @@ def cropped_digits_img(filename):
     img = (255-img)
     #if interactive: cv2.imshow("greyed inverted", img)
 
+    calib_x = 802
+    calib_width = 169
+    calib_day_y = 448
+    calib_day_height = 46
+    calib_night_y = calib_day_y+85
+    calib_night_height = 40
+    
+
     #-------------
     # day figures
     # Crop the image to focus on the day digits
-    img_day = img[445:492, 805:975]
-    # if interactive: cv2.imshow("cropped", img)  # ; cv2.waitKey(0)
+    # img_day = img[445:492, 805:975]
+    img_day = img[calib_day_y:calib_day_y+calib_day_height, calib_x:calib_x+calib_width]
+    # if interactive: cv2.imshow("cropped img_day", img_day) #; cv2.waitKey(0)
 
     # thresholding
     ret, img_day = cv2.threshold(img_day,30,255,cv2.THRESH_BINARY)
     # print("cv2.THRESH_BINARY : ", cv2.THRESH_BINARY)
 
     # Display cropped image
-    # if interactive: cv2.imshow("threshed", img_day); cv2.waitKey(0)
+    if interactive: cv2.imshow("threshed", img_day); cv2.waitKey(0)
 
     #-------------
     # night figures
     # Crop the image to focus on the day digits
-    img_night = img[530:570, 805:975]
-    #if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
+    # img_night = img[530:570, 805:975]
+    img_night = img[calib_night_y:calib_night_y+calib_night_height, calib_x:calib_x+calib_width]
+    # if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
 
     # thresholding
     ret, img_night = cv2.threshold(img_night,30,255,cv2.THRESH_BINARY)
     # print("cv2.THRESH_BINARY : ", cv2.THRESH_BINARY)
 
     # Display cropped image
-    # if interactive: cv2.imshow("threshed", img_night); cv2.waitKey(0_day,img_night)
+    # if interactive: cv2.imshow("threshed img_night", img_night)  #; cv2.waitKey(0)
 
 
     return img_day,img_night
@@ -225,17 +235,17 @@ def get_best_result(candidate_results, img, day_night):
     # create a list of valid results only
     valid_results = []
     for c in candidate_results:
-        # print(f'{c[0]:35}: {c[1]}')
+        if interactive: print(f'{c[0]:35}: {c[1]}')
         st = c[1].strip()
         if len(st) == 6 and st.isnumeric:
             number = int(st)
             # check the read figures make sense (sometimes a "7" is read as a "1" by tesseract)
             if day_night == "day":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
-                val = last_validated_value("power_day")
+                last_validated_val = last_validated_value("power_day")
                 # if number > 71000 and number < 72000:
-                if val != None:
-                    if number >= val and number <= val+1:
+                if last_validated_val != None:
+                    if number >= last_validated_val-1 and number <= last_validated_val+2:
                         valid_results.append(st)
             else:
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
@@ -377,9 +387,10 @@ def check_power():
         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     else:
         filename = "tmp_"+basename+'.jpg'
+        filename_bak = "tmp_"+basename+'.bak.jpg'
         img_day,img_night = cropped_digits_img(filename)
-        os.remove(filename)
-
+        os.rename(filename,filename_bak)
+        
     #---- day ----------
     img = img_day
     candidate_results = []
@@ -465,7 +476,7 @@ def check_power():
         create_event("power_night",str(night))
 
     if interactive:
-        cv2.waitKey(0)
+        # cv2.waitKey(0)
         cv2.destroyAllWindows()
 
     return day, night
