@@ -94,37 +94,56 @@ def cropped_digits_img(filename):
     calib_day_height = 47
     calib_night_y = calib_day_y+85
     calib_night_height = 40
+    calib_dec_start = 172
+    calib_dec_width = 20
+    calib_night_decimal_height = 40-4
 
     #-------------
     # day figures
-    # Crop the image to focus on the day digits
+    # Crop the image to focus on the digits
     #img_day = img[445:492, 805:975]
     img_day = img[calib_day_y:calib_day_y+calib_day_height, calib_x:calib_x+calib_width]
     # if interactive: cv2.imshow("cropped img_day", img_day) #; cv2.waitKey(0)
 
-    # thresholding
-    ret, img_day = cv2.threshold(img_day,30,255,cv2.THRESH_BINARY)
-    # print("cv2.THRESH_BINARY : ", cv2.THRESH_BINARY)
-
-    # Display cropped image
+    # thresholding to get a black/white picture
+    _, img_day = cv2.threshold(img_day,30,255,cv2.THRESH_BINARY)
     # if interactive: cv2.imshow("threshed", img_day); cv2.waitKey(0)
 
     #-------------
+    # day_decimal
+    # Crop the image to focus on the digits
+    img_day_decimal = img[calib_day_y:calib_day_y+calib_day_height-3, calib_x+calib_dec_start:calib_x+calib_dec_start+calib_dec_width]
+    # if interactive: cv2.imshow("cropped img_day", img_day_decimal) ; cv2.waitKey(0)
+
+    # thresholding to get a black/white picture
+    _, img_day_decimal = cv2.threshold(img_day_decimal,30,255,cv2.THRESH_BINARY)
+    # if interactive: cv2.imshow("threshed day", img_day_decimal); cv2.waitKey(0)
+
+    #-------------
     # night figures
-    # Crop the image to focus on the day digits
+    # Crop the image to focus on the digits
     #img_night = img[530:570, 805:975]
     img_night = img[calib_night_y:calib_night_y+calib_night_height, calib_x:calib_x+calib_width]
     # if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
 
-    # thresholding
-    ret, img_night = cv2.threshold(img_night,30,255,cv2.THRESH_BINARY)
-    # print("cv2.THRESH_BINARY : ", cv2.THRESH_BINARY)
-
-    # Display cropped image
+    # thresholding to get a black/white picture
+    _, img_night = cv2.threshold(img_night,30,255,cv2.THRESH_BINARY)
     # if interactive: cv2.imshow("threshed img_night", img_night)  #; cv2.waitKey(0)
 
+    #-------------
+    # night_decimal
+    # Crop the image to focus on the digits
+    img_night_decimal = img[calib_night_y+1:calib_night_y+calib_night_decimal_height, calib_x+calib_dec_start:calib_x+calib_dec_start+calib_dec_width]
+    # if interactive: cv2.imshow("cropped img_night", img_night_decimal) ; cv2.waitKey(0)
 
-    return img_day,img_night
+    # thresholding to get a black/white picture
+    _, img_night_decimal = cv2.threshold(img_night_decimal,30,255,cv2.THRESH_BINARY)
+    # if interactive: cv2.imshow("threshed night", img_night_decimal); cv2.waitKey(0)
+
+    #-------------
+
+
+    return img_day, img_night, img_day_decimal, img_night_decimal
 
 
 def get_digits(img_name, img, options_list):
@@ -213,7 +232,7 @@ def last_validated_value(categ):
     return validated_value
 
 
-def get_best_result(candidate_results, img, day_night):
+def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
     """
     results is an array of [label_str, result_str] (ex: ["tesseract optimised","743 423"])
     - create a list with only the valid results (format must be "999 999", after having removed any dot ("."))
@@ -226,6 +245,8 @@ def get_best_result(candidate_results, img, day_night):
         - if there are different results :
             store the problematic image for later analysis in issues/ambiguous-<datetime>
             return first day,night in the list
+    
+    - kind is the kind of image at stake : "day", "night", "day_decimal", "night_decimal"
     """
 
     x = datetime.datetime.now()
@@ -234,25 +255,43 @@ def get_best_result(candidate_results, img, day_night):
     # create a list of valid results only
     valid_results = []
     for c in candidate_results:
-        if interactive: print(f'{c[0]:35}: {c[1]}')
+        # if interactive: print(f'{c[0]:35}: {c[1]}')
         st = c[1].strip()
-        if len(st) == 6 and st.isnumeric:
+        if len(st) >= 1 and st !="." and st.isnumeric:
             number = int(st)
             # check the read figures make sense (sometimes a "7" is read as a "1" by tesseract)
-            if day_night == "day":
+            if kind == "day":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_day")
                 # if number > 71000 and number < 72000:
                 if last_validated_val != None:
                     if number >= last_validated_val-1 and number <= last_validated_val+2:
                         valid_results.append(st)
-            else:
+            elif kind == "night":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 val = last_validated_value("power_night")
                 # if number > 65000 and number < 67000:
                 if val != None:
-                    if number >= val and number <= val+1:
+                    if number >= val and number <= val+5:
                         valid_results.append(st)
+            elif kind == "day_decimal":
+                # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
+                last_val = last_validated_value("power_day")
+                # prev_decimal_part = round((val % 1) * 10)
+                if number>=0 and number<=9:
+                    if optional_non_decimal_part != None:
+                        candidate_full_value = optional_non_decimal_part + number/10
+                        if candidate_full_value >= last_val:
+                            valid_results.append(st)
+            elif kind == "night_decimal":
+                # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
+                last_val = last_validated_value("power_night")
+                # prev_decimal_part = round((val % 1) * 10)
+                if number>=0 and number<=9:
+                    if optional_non_decimal_part != None:
+                        candidate_full_value = optional_non_decimal_part + number/10
+                        if candidate_full_value >= last_val:
+                            valid_results.append(st)
     
     #remove duplicates from list of valid results
     valid_results = list(dict.fromkeys(valid_results))
@@ -266,7 +305,7 @@ def get_best_result(candidate_results, img, day_night):
         number = None
         # print("No valid results !")
         # store image for later analysis :
-        filename = issues_path + "noresult_" + now_str + ".jpg"
+        filename = issues_path + "noresult_decimal_" + now_str + ".jpg"
         cv2.imwrite(filename, img)
     else:
         # at least one valid result; first one is kept and returned
@@ -319,7 +358,7 @@ def optimise_img(img):
     return img
 
 
-def explain_tesseract(img, title, options_str):
+def explain_tesseract(img, title, options_str, candidate_results):
     """
     explains the tesseract way of analysing this image by having boxes drawn around the characters
     """
@@ -363,17 +402,58 @@ def write_gray_to_file(img_name, img):
     img_to_save = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
     cv2.imwrite(img_name + ".jpg", img_to_save)
 
-
-def check_power():
-    global candidate_results
-    global interactive
-
-
+def collect_candidate_results(img, kind, basename):
+    """
+    extract from img, of given kind ("day", "night", etc) all the possible candidates as 
+    read string of numerical digits
+    """
     # NB : shlex.split('tesseract -c page_separator="" cropped_chalet.jpg stdout --psm 13')
     options_str="--psm 13 -c tessedit_char_whitelist='.0123456789 '"
     #options_str="--psm 6 -c tessedit_char_whitelist='.0123456789 '"
     # shlex.split('tesseract -c page_separator="" cropped_chalet.jpg stdout --psm 13')
     options_list = shlex.split(options_str)
+
+    candidate_results = []
+    img_name = basename+'_' + kind + '_cropped'
+    #if interactive: cv2.imshow(img_name, img)
+    # save a copy of this plain image for later analysis
+    write_gray_to_file(img_name, img)
+
+    # # read it again to check
+    # img = cv2.imread(filename)
+    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # if interactive: cv2.imshow("cropped digits", img); cv2.waitKey
+
+    # extract the figures from this plain image
+    res1 = get_digits(img_name, img, options_list)
+    candidate_results.append([kind + " tess. not optimised",res1])
+    # if interactive: print("tesseract not optimised : ",res1)
+    # if interactive: cv2.imshow("not optimised", img)
+    explain_tesseract(img, kind + " pytess. not optimised", options_str, candidate_results)
+
+    # try to optimise the image
+    img = optimise_img(img)
+    img_name = basename+'_' + kind + '_optimised'
+    #if interactive: cv2.imshow(img_name, img)
+    # save a copy of this plain image for later analysis
+    write_gray_to_file(img_name, img)
+
+    # extract the figures from this optimised image
+    res2 = get_digits(img_name, img, options_list)
+    candidate_results.append([kind + " tess. optimised",res2])
+    # if interactive: print("tesseract  optimised : ",res1)
+    # if interactive: cv2.imshow("optimised", img)
+    explain_tesseract(img, kind + " pytess. optimised", options_str, candidate_results)
+    return candidate_results
+
+def display_candidate_results(candidate_results):
+    for c in candidate_results:
+        if interactive: print(f'{c[0]:35}: {c[1]}')
+
+def check_power():
+    global candidate_results
+    global interactive
+
 
     basename = "power_base"
     get_cam_footage("tmp_"+basename)
@@ -387,95 +467,56 @@ def check_power():
     else:
         filename = "tmp_"+basename+'.jpg'
         filename_bak = "tmp_"+basename+'.bak.jpg'
-        img_day,img_night = cropped_digits_img(filename)
+        img_day, img_night, img_day_decimal, img_night_decimal = cropped_digits_img(filename)
         os.rename(filename,filename_bak)
         
     if interactive: print("")
 
     #---- day ----------
-    img = img_day
-    candidate_results = []
-    img_name = basename+'_day_cropped'
-    #if interactive: cv2.imshow(img_name, img)
-    # save a copy of this plain image for later analysis
-    write_gray_to_file(img_name, img)
-
-    # # read it again to check
-    # img = cv2.imread(filename)
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # if interactive: cv2.imshow("cropped digits", img); cv2.waitKey
-
-    # extract the figures from this plain image
-    res1 = get_digits(img_name, img, options_list)
-    candidate_results.append(["day tess. not optimised",res1])
-    # if interactive: print("tesseract not optimised : ",res1)
-    # if interactive: cv2.imshow("not optimised", img)
-    explain_tesseract(img, "day pytess. not optimised", options_str)
-
-    # try to optimise the image
-    img = optimise_img(img)
-    img_name = basename+'_day_optimised'
-    #if interactive: cv2.imshow(img_name, img)
-    # save a copy of this plain image for later analysis
-    write_gray_to_file(img_name, img)
-
-    # extract the figures from this optimised image
-    res2 = get_digits(img_name, img, options_list)
-    candidate_results.append(["day tess. optimised",res2])
-    # if interactive: print("tesseract  optimised : ",res1)
-    # if interactive: cv2.imshow("optimised", img)
-    explain_tesseract(img, "day pytess. optimised", options_str)
-    
-    day = get_best_result(candidate_results, img, "day")
-    # day = check_digits(res1)
+    candidate_results = collect_candidate_results(img_day,"day",basename)
+    if interactive: display_candidate_results(candidate_results)
+    day = get_best_result(candidate_results, img_day, "day", None)
     if interactive: print("")
+
+    #---- day decimal part ----------
+    candidate_results = collect_candidate_results(img_day_decimal,"day_decimal",basename)
+    if interactive: display_candidate_results(candidate_results)
+    # it makes sense to try and identify the decimal part only if a non-decimal part has been found
+    if day != None:
+        day_decimal = get_best_result(candidate_results, img_day_decimal, "day_decimal", day)
+        # if interactive: print("day_decimal : ", day_decimal)
+
+    if interactive: print("----------------------")
 
     #---- night ----------
-    img = img_night
-    candidate_results = []
-    img_name = basename+'_night_cropped'
-    #if interactive: cv2.imshow(img_name, img)
-    # save a copy of this plain image for later analysis
-    write_gray_to_file(img_name, img)
-
-    # # read it again to check
-    # img = cv2.imread(filename)
-    # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    # if interactive: cv2.imshow("cropped digits", img); cv2.waitKey
-
-    # extract the figures from this plain image
-    res1 = get_digits(img_name, img, options_list)
-    candidate_results.append(["night tess. not optimised",res1])
-    # if interactive: print("tesseract not optimised : ",res1)
-    # if interactive: cv2.imshow("not optimised", img)
-    explain_tesseract(img, "night pytess. not optimised", options_str)
-
-    # try to optimise the image
-    img = optimise_img(img)
-    img_name = basename+'_night_optimised'
-    #if interactive: cv2.imshow(img_name, img)
-    # save a copy of this plain image for later analysis
-    write_gray_to_file(img_name, img)
-
-    # extract the figures from this optimised image
-    res2 = get_digits(img_name, img, options_list)
-    candidate_results.append(["nigth tess. optimised",res2])
-    # if interactive: print("tesseract  optimised : ",res1)
-    # if interactive: cv2.imshow("optimised", img)
-    explain_tesseract(img, "niht pytess. optimised", options_str)
-    #print("")
-    
-    night = get_best_result(candidate_results, img, "night")
+    candidate_results = collect_candidate_results(img_night,"night",basename)
+    if interactive: display_candidate_results(candidate_results)
+    night = get_best_result(candidate_results, img_night, "night", None)
     if interactive: print("")
-    # night = check_digits(res1)
+
+    #---- night decimal part ----------
+    candidate_results = collect_candidate_results(img_night_decimal,"night_decimal",basename)
+    if interactive: display_candidate_results(candidate_results)
+    if night != None:
+    # it makes sense to try and identify the decimal part only if a non-decimal part has been found
+        night_decimal = get_best_result(candidate_results, img_night_decimal, "night_decimal", night)
+        # if interactive: print("night_decimal : ", night_decimal)
+
+    if interactive: print("")
+
 
     #--------------------------
 
-    if day != None:
+    if day != None and day_decimal != None:
+        day = day + day_decimal/10
         create_event("power_day",str(day))
 
-    if night != None:
+    if night != None and night_decimal != None:
+        night = night + night_decimal/10
         create_event("power_night",str(night))
+
+    # if night != None:
+    #     create_event("power_night",str(night))
 
     if interactive:
         # cv2.waitKey(0)
