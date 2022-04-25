@@ -42,7 +42,7 @@ cv = cv2
 
 # export DISPLAY=localhost:10.0
 
-os.environ["DISPLAY"] = "localhost:11.0"
+os.environ["DISPLAY"] = "localhost:10.0"
 print(os.environ["DISPLAY"] +
       " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
 
@@ -82,18 +82,23 @@ def get_snapshot(basename):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True)
-        print("----args = ", process.args)
-        print("----rc = ", process.returncode)
         my_stdout = process.stdout
         err = process.stderr
-        print("----stdout = ", my_stdout)
-        print("----err = ", err)
+        # print("----args = ", process.args)
+        # print("----rc = ", process.returncode)
+        # print("----stdout = ", my_stdout)
+        # print("----err = ", err)
         
-        try_again = (
-            (err.find("Output file is empty") != -1) 
-            or
-            (err.find("Conversion failed!") != -1)
-        )
+
+
+        # try_again = (
+        #     (err.find("Output file is empty") != -1) 
+        #     or
+        #     (err.find("Conversion failed!") != -1)
+        # )
+        # continue until a jpg is produced (which doesn't happen if the .h264 file is corrupted or empty)
+        try_again = (not os.path.isfile(f'{basename}.jpg'))
+
         i += 1
         time.sleep(1)
 
