@@ -314,14 +314,14 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                 # if number > 71000 and number < 72000:
                 if last_validated_val != None:
                     truncated = int(last_validated_val)
-                    if number >= int(last_validated_val)-1 and number <= last_validated_val+3:
+                    if number >= int(last_validated_val)-1 and number <= last_validated_val+10:
                         valid_results.append(st)
             elif kind == "night":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_night")
                 # if number > 65000 and number < 67000:
                 if last_validated_val != None:
-                    if number >= int(last_validated_val)-1 and number <= last_validated_val+3:
+                    if number >= int(last_validated_val)-1 and number <= last_validated_val+10:
                         valid_results.append(st)
             elif kind == "day_decimal":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
