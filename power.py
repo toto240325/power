@@ -15,6 +15,7 @@
 # select time, text from events where categ="power_day" and text = "7.9"; # and time = "2022-04-22 15:10:44";
 # select id, time, text from events where categ="power_night" and text > "61000" and time > "2022-04-24 13:00";
 # update events set text = "65861.4"  where id=300646;
+# select * from events where id=300769;
 
 # # import modules and packages are searched for in sys.path :
 # import sys
@@ -23,28 +24,252 @@
 #   print(path)
 
 # Import packages
-import cv2
-import numpy as np
-import subprocess
 import os
+import sys
+import platform
 import time
 import datetime
+import subprocess
 import logging
+
+import numpy as np
 import pytesseract
+import cv2
 import shlex
+
 from event import create_event
 from event import read_where
-import mysendmail
+import utils
 import params
 # from audioop import add
 
-cv = cv2
+calib_day_x = params.calib_day_x
+calib_day_y = params.calib_day_y
+calib_day_width = params.calib_day_width
+calib_day_height = params.calib_day_height
 
-# export DISPLAY=localhost:10.0
+calib_night_x = params.calib_night_x
+calib_night_y = params.calib_night_y
+calib_night_width = params.calib_night_width
+calib_night_height = params.calib_night_height
 
-os.environ["DISPLAY"] = "localhost:10.0"
+calib_day_dec_x = params.calib_day_dec_x
+calib_day_dec_y = params.calib_day_dec_y
+calib_day_dec_width = params.calib_day_dec_width
+calib_day_dec_height = params.calib_day_dec_height
+
+calib_night_dec_x = params.calib_night_dec_x
+calib_night_dec_y = params.calib_night_dec_y
+calib_night_dec_width = params.calib_night_dec_width
+calib_night_dec_height = params.calib_night_dec_height
+
+# export DISPLAY=localhost:xx.0
+
+os.environ["DISPLAY"] = "localhost:11.0"
 print(os.environ["DISPLAY"] +
       " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
+
+
+def set_calibration(img, x, y, width, height):
+    """"
+    allows to move a rectangle on top of a given image and returns the x,y coordinates of the top left corner 
+    of the rectangle
+    """
+    dist = 10  # distance (in pixels) to move the rectangle with each move
+    mode = "P"   # P: arrows change position    S: arrows change size
+    window_name = "with rectangle"
+    flags = cv2.WINDOW_NORMAL
+    # flags = cv2.WINDOW_AUTOSIZE
+    cv2.namedWindow(window_name, flags)
+    while True:
+        img2 = np.copy(img)
+        mytext = f'({x},{y}) width:{width} height:{height} - dist (+/-) : {dist} - Mode:{mode}'
+        cv2.putText(img=img2, text=mytext, org=(
+            50, 50), fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1, color=(0, 255, 0), thickness=1)
+
+        cv2.rectangle(img2, (x, y), (x + width, y + height), (255, 0, 0), 2)
+        cv2.imshow(window_name, img2)
+        k = cv2.waitKey(0)
+
+        # print(k)
+
+        mySystem = platform.system()
+        if mySystem == "Windows":
+            esc = 27
+            up = 2490368
+            down = 2621440
+            left = 2424832
+            right = 2555904
+            plus = 43
+            minus = 45
+        if mySystem == "Linux":
+            esc = 27
+            up = 82
+            down = 84
+            left = 81
+            right = 83
+            plus = 43
+            minus = 45
+
+        if k == esc:
+            break
+        elif k == -1:  # normally -1 returned,so don't print it
+            continue
+        elif k == up:
+            if mode == "P": y -= dist
+            else: height -= dist
+        elif k == down:
+            if mode == "P": y += dist
+            else: height += dist
+        elif k == left:
+            if mode == "P": x -= dist
+            else: width -= dist
+        elif k == right:
+            if mode == "P": x += dist
+            else: width += dist
+        elif k == plus:
+            dist += 1
+        elif k == minus:
+            dist -= 1
+        elif k == ord("m"):
+            mode = "P" if mode == "V" else "V"
+        else:
+            print(k)  # else print its value
+
+    cv2.destroyAllWindows()
+
+    return x, y, width, height
+
+
+
+# def set_calibration_power(img, x, y, width, height):
+#     """"
+#     allows to move a rectangle on top of a given image and returns the x,y coordinates of the top left corner 
+#     of the rectangle
+#     """
+#     dist = 3  # distance (in pixels) to move the rectangle with each move
+#     while True:
+#         img2 = np.copy(img)
+#         cv2.putText(img=img2, text=f'Hello {y} - dist : {dist}', org=(
+#             50, 50), fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=2, color=(0, 255, 0), thickness=1)
+
+#         cv2.rectangle(img2, (x, y), (x + width, y + height), (255, 0, 0), 2)
+#         cv2.imshow("with rectangle", img2)
+#         k = cv2.waitKeyEx(0)
+
+#         # print(k)
+
+#         myenv = "Windows"
+#         if myenv == "Windows":
+#             esc = 27
+#             up = 2490368
+#             down = 2621440
+#             left = 2424832
+#             right = 2555904
+#             plus = 43
+#             minus = 45
+#         if myenv == "Linux":
+#             esc = 27
+#             up = 82
+#             down = 84
+#             left = 81
+#             right = 83
+#             # plus = 43
+#             # minus = 45
+
+#         if k == esc:
+#             break
+#         elif k == -1:  # normally -1 returned,so don't print it
+#             continue
+#         elif k == up:
+#             y -= dist
+#         elif k == down:
+#             y += dist
+#         elif k == left:
+#             x -= dist
+#         elif k == right:
+#             x += dist
+#         elif k == plus:
+#             dist += 1
+#         elif k == minus:
+#             dist -= 1
+#         else:
+#             print(k)  # else print its value
+
+#     return x, y
+
+
+
+# def get_cam_footage(basename):
+#     """
+#     get 1 second of video from the chalet Webcam and put it in <basename>.h264
+#     """
+#     process = subprocess.run(
+#         ['openRTSP', '-d', '1', '-V', '-F',
+#             f'{basename}-', 'rtsp://admin:123456@192.168.0.91/'],
+#         stdout=subprocess.PIPE,
+#         stderr=subprocess.PIPE,
+#         universal_newlines=True)
+#     # print("rc = ", process.returncode)
+#     # print("result = ", process.stdout)
+#     # err = process.stderr
+#     # # print("err = ", process.stderr)
+#     # $ cp chalet-video-H264-1 a.h264
+#     # $ vlc a.h264
+
+#     # os.rename(f'{basename}-video-H264-1', f'{basename}.h264')
+#     # os.remove(f'{basename}-audio-PCMA-2')
+
+#     video_file = f'{basename}-video-H264-1'
+#     if os.path.isfile(video_file):
+#         os.rename(video_file, f'{basename}.h264')
+    
+#     audio_file = f'{basename}-audio-PCMA-2'
+#     if os.path.isfile(audio_file):
+#         os.remove(audio_file)
+
+
+
+# def get_snapshot(basename):
+#     """
+#     extract a snapshot from <basename>.h264 and put it in <basename>.jpg
+#     """
+#     try_again = True
+#     i = 0
+#     max_iteration = 10
+#     while try_again and i <= max_iteration:
+#         # extra a picture from that video
+#         process = subprocess.run(
+#             ['ffmpeg', '-y', '-i', f'{basename}.h264',
+#                 '-frames:v', '1', f'{basename}.jpg'],
+#             stdout=subprocess.PIPE,
+#             stderr=subprocess.PIPE,
+#             universal_newlines=True)
+#         my_stdout = process.stdout
+#         err = process.stderr
+#         # print("----args = ", process.args)
+#         # print("----rc = ", process.returncode)
+#         # print("----stdout = ", my_stdout)
+#         # print("----err = ", err)
+        
+#         # try_again = (
+#         #     (err.find("Output file is empty") != -1) 
+#         #     or
+#         #     (err.find("Conversion failed!") != -1)
+#         # )
+#         # continue until a jpg is produced (which doesn't happen if the .h264 file is corrupted or empty)
+#         try_again = (not os.path.isfile(f'{basename}.jpg'))
+
+#         i += 1
+#         time.sleep(1)
+
+#     logging.info(f"nb_iteration : {i}")
+#     if i > max_iteration:
+#         logging.info("!!!!!!!! couldn't extract snapshot from footage !!!!!")
+#     else:
+#         os.rename(f'{basename}.h264', f'{basename}.bak.h264')
+
+#     return i <= max_iteration
 
 
 def get_cam_footage(basename):
@@ -63,17 +288,32 @@ def get_cam_footage(basename):
     # # print("err = ", process.stderr)
     # $ cp chalet-video-H264-1 a.h264
     # $ vlc a.h264
-    os.rename(f'{basename}-video-H264-1', f'{basename}.h264')
-    os.remove(f'{basename}-audio-PCMA-2')
+
+    audio_file = f'{basename}-audio-PCMA-2'
+    if os.path.isfile(audio_file):
+        os.remove(audio_file)
+
+    video_file = f'{basename}-video-H264-1'
+    if os.path.isfile(video_file):
+        footage_filename = f'{basename}.h264'
+        os.rename(video_file, footage_filename)
+    else:
+        footage_filename = None
+    return footage_filename
 
 
-def get_snapshot(basename):
+def get_snapshot(footage_filename):
     """
     extract a snapshot from <basename>.h264 and put it in <basename>.jpg
     """
+
+    if footage_filename == None:
+        return None
     try_again = True
     i = 0
     max_iteration = 10
+    basename_ext = os.path.basename(footage_filename)
+    basename, ext = os.path.splitext(basename_ext)
     while try_again and i <= max_iteration:
         # extra a picture from that video
         process = subprocess.run(
@@ -88,27 +328,30 @@ def get_snapshot(basename):
         # print("----rc = ", process.returncode)
         # print("----stdout = ", my_stdout)
         # print("----err = ", err)
-        
-
 
         # try_again = (
-        #     (err.find("Output file is empty") != -1) 
+        #     (err.find("Output file is empty") != -1)
         #     or
         #     (err.find("Conversion failed!") != -1)
         # )
         # continue until a jpg is produced (which doesn't happen if the .h264 file is corrupted or empty)
         try_again = (not os.path.isfile(f'{basename}.jpg'))
 
+        if try_again: time.sleep(1)
         i += 1
-        time.sleep(1)
 
-    print("nb_iteration :", i)
+    logging.info(f"nb_iteration : {i}")
     if i > max_iteration:
-        print("!!!!!!!! couldn't extract snapshot from footage !!!!!")
+        logging.error("!!!!!!!! couldn't extract snapshot from footage !!!!!")
     else:
         os.rename(f'{basename}.h264', f'{basename}.bak.h264')
 
-    return i <= max_iteration
+    if i <= max_iteration:
+        extracted_img_filename = f'{basename}.jpg'
+    else:
+        extracted_img_filename = None
+
+    return extracted_img_filename
 
 
 def cropped_digits_img(filename):
@@ -116,7 +359,7 @@ def cropped_digits_img(filename):
 
     # read the snapshot
     img = cv2.imread(filename)
-    # print(img.shape) # Print image shape
+    # logging.info(img.shape) # Print image shape
     #if interactive: cv2.imshow("original", img)
 
     # convert to grey only
@@ -127,22 +370,22 @@ def cropped_digits_img(filename):
     img = (255-img)
     #if interactive: cv2.imshow("greyed inverted", img)
 
-    calib_x = 805
-    calib_width = 170
-    calib_day_y = 445
-    calib_day_height = 47
-    calib_night_y = calib_day_y+85
-    calib_night_height = 40
-    calib_dec_start = 172
-    calib_dec_width = 20
-    calib_night_decimal_height = 40-4
+    # calib_x = 805
+    # calib_width = 170
+    # calib_day_y = 445
+    # calib_day_height = 47
+    # calib_night_y = calib_day_y+85
+    # calib_night_height = 40
+    # calib_dec_start = 172
+    # calib_dec_width = 20
+    # calib_night_decimal_height = 40-4
 
     # -------------
     # day figures
     # Crop the image to focus on the digits
     #img_day = img[445:492, 805:975]
     img_day = img[calib_day_y:calib_day_y +
-                  calib_day_height, calib_x:calib_x+calib_width]
+                  calib_day_height, calib_day_x:calib_day_x+calib_day_width]
     # if interactive: cv2.imshow("cropped img_day", img_day) #; cv2.waitKey(0)
 
     # thresholding to get a black/white picture
@@ -152,9 +395,9 @@ def cropped_digits_img(filename):
     # -------------
     # day_decimal
     # Crop the image to focus on the digits
-    img_day_decimal = img[calib_day_y:calib_day_y+calib_day_height-3,
-                          calib_x+calib_dec_start:calib_x+calib_dec_start+calib_dec_width]
-    # if interactive: cv2.imshow("cropped img_day", img_day_decimal) ; cv2.waitKey(0)
+    img_day_decimal = img[calib_day_dec_y:calib_day_dec_y+calib_day_dec_height,
+                          calib_day_dec_x:calib_day_dec_x+calib_day_dec_width]
+    # if interactive: cv2.imshow("cropped img_day_dec", img_day_dec_decimal) ; cv2.waitKey(0)
 
     # thresholding to get a black/white picture
     _, img_day_decimal = cv2.threshold(
@@ -166,7 +409,7 @@ def cropped_digits_img(filename):
     # Crop the image to focus on the digits
     #img_night = img[530:570, 805:975]
     img_night = img[calib_night_y:calib_night_y +
-                    calib_night_height, calib_x:calib_x+calib_width]
+                    calib_night_height, calib_night_x:calib_night_x+calib_night_width]
     # if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
 
     # thresholding to get a black/white picture
@@ -176,8 +419,8 @@ def cropped_digits_img(filename):
     # -------------
     # night_decimal
     # Crop the image to focus on the digits
-    img_night_decimal = img[calib_night_y+1:calib_night_y+calib_night_decimal_height,
-                            calib_x+calib_dec_start:calib_x+calib_dec_start+calib_dec_width]
+    img_night_decimal = img[calib_night_dec_y:calib_night_dec_y+calib_night_dec_height,
+                            calib_night_dec_x:calib_night_dec_x+calib_night_dec_width]
     # if interactive: cv2.imshow("cropped img_night", img_night_decimal) ; cv2.waitKey(0)
 
     # thresholding to get a black/white picture
@@ -274,7 +517,7 @@ def last_validated_value(categ):
         body = long_error_msg
         htmlbody = None
         myfilename = None
-        mysendmail.mySend(user_name, passwd, from_email,
+        utils.mySend(user_name, passwd, from_email,
                           to_email, subject, body, htmlbody, myfilename)
 
     return validated_value
@@ -600,18 +843,113 @@ def check_power():
     return day, night
 
 
+def calibration_power_day():
+
+    global calib_day_x, calib_day_y, calib_day_width, calib_day_height
+    global calib_night_x, calib_night_y, calib_night_width, calib_night_height
+    global calib_day_dec_x, calib_day_dec_y, calib_day_dec_width, calib_day_dec_height
+    global calib_night_dec_x, calib_night_dec_y, calib_night_dec_width, calib_night_dec_height
+
+    basename = "power"
+    footage_filename = get_cam_footage(basename)
+    img_filename = get_snapshot(footage_filename)
+    img = None
+    if img_filename != None and os.path.isfile(img_filename):
+        img = cv2.imread(img_filename)
+        # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    if isinstance(img,np.ndarray) and img.any() != None:
+
+        basename = "power_day_base"
+        calib_day_x, calib_day_y, calib_day_width, calib_day_height = set_calibration(
+            img, calib_day_x, calib_day_y, calib_day_width, calib_day_height)
+        utils.replace_param("params.py", "calib_day_x", calib_day_x)
+        utils.replace_param("params.py", "calib_day_y", calib_day_y)
+        utils.replace_param("params.py", "calib_day_width", calib_day_width)
+        utils.replace_param("params.py", "calib_day_height", calib_day_height)
+        logging.info(
+            f'day : x:{calib_day_x}, y:{calib_day_y}, width:{calib_day_width}, height:{calib_day_height}')
+
+        basename = "power_night_base"
+        calib_night_x, calib_night_y, calib_night_width, calib_night_height = set_calibration(
+            img, calib_night_x, calib_night_y, calib_night_width, calib_night_height)
+        utils.replace_param("params.py", "calib_night_x", calib_night_x)
+        utils.replace_param("params.py", "calib_night_y", calib_night_y)
+        utils.replace_param("params.py", "calib_night_width", calib_night_width)
+        utils.replace_param("params.py", "calib_night_height", calib_night_height)
+        logging.info(
+            f'night : x:{calib_night_x}, y:{calib_night_y}, width:{calib_night_width}, height:{calib_night_height}')
+
+        basename = "power_day_dec_base"
+        calib_day_dec_x, calib_day_dec_y, calib_day_dec_width, calib_day_dec_height = set_calibration(
+            img, calib_day_dec_x, calib_day_dec_y, calib_day_dec_width, calib_day_dec_height)
+        utils.replace_param("params.py", "calib_day_dec_x", calib_day_dec_x)
+        utils.replace_param("params.py", "calib_day_dec_y", calib_day_dec_y)
+        utils.replace_param("params.py", "calib_day_dec_width", calib_day_dec_width)
+        utils.replace_param("params.py", "calib_day_dec_height", calib_day_dec_height)
+        logging.info(
+            f'day_dec : x:{calib_day_dec_x}, y:{calib_day_dec_y}, width:{calib_day_dec_width}, height:{calib_day_dec_height}')
+
+        basename = "power_night_dec_base"
+        calib_night_dec_x, calib_night_dec_y, calib_night_dec_width, calib_night_dec_height = set_calibration(
+            img, calib_night_dec_x, calib_night_dec_y, calib_night_dec_width, calib_night_dec_height)
+        utils.replace_param("params.py", "calib_night_dec_x", calib_night_dec_x)
+        utils.replace_param("params.py", "calib_night_dec_y", calib_night_dec_y)
+        utils.replace_param("params.py", "calib_night_dec_width", calib_night_dec_width)
+        utils.replace_param("params.py", "calib_night_dec_height", calib_night_dec_height)
+        logging.info(
+            f'night_dec : x:{calib_night_dec_x}, y:{calib_night_dec_y}, width:{calib_night_dec_width}, height:{calib_night_dec_height}')
+
+    else:
+        logging.error("Cannot calibrate because didn't get an image")
+
+    # calib_day_x, calib_day_y = set_calibration(
+    #     img, calib_day_x, calib_day_y, calib_day_width, calib_day_height)
+
+    # logging.info(
+    #     f'x:{calib_day_x}, y:{calib_day_y}, width:{calib_day_width}, height:{calib_day_height}')
+
+
+def print_usage():
+    print("Usage : ")
+    print(" python power.py         : get the power figures and display them on stdout")
+    # print(" python power.py where [[[ categ ] nb ] date_from ]     : prints the most recent ps4 powers")  
+    print(" python power.py calib   : recalibrate the cropping of the image")  
+    print(" python power.py anythingelse : print this usage")
+
+
 def main():
+    utils.init_logger('INFO')
+    logging.info("------------------------------------------------------------")
+    logging.info("Starting power")
+
+    nb_args = len(sys.argv)
+    logging.info(f'Number of arguments: {nb_args} arguments.')
+    logging.info(f'Argument List: {str(sys.argv)}')
+    if nb_args == 2:
+        arg1 = sys.argv[1]
+        logging.info(f"arg1 = {arg1}")
+        if arg1 == "calib":
+            calibration_power_day()
+        else:
+            print_usage()
+
     day, night = check_power()
     if day != None or night != None:
-        print(f'day : {day} - night : {night}')
+        logging.info(f'day : {day} - night : {night}')
     else:
-        print("Couldn't read valid figures !")
+        logging.info("Couldn't read valid figures !")
+
+    logging.info("Ending power")
+    utils.shutdown_logger()
 
 
 interactive = False
+calibration = False
 
 if __name__ == '__main__':
     import getpass
     username = getpass.getuser()
     interactive = (username == "toto")
+    calibration = True
     main()
