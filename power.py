@@ -364,11 +364,11 @@ def cropped_digits_img(filename):
 
     # convert to grey only
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #if interactive: cv2.imshow("greyed", img)
+    # if interactive: cv2.imshow("greyed", img)
 
     # invert image (black becomes white)
     img = (255-img)
-    #if interactive: cv2.imshow("greyed inverted", img)
+    # if interactive: cv2.imshow("greyed inverted", img)  #; cv2.waitKey(0)
 
     # calib_x = 805
     # calib_width = 170
@@ -386,11 +386,20 @@ def cropped_digits_img(filename):
     #img_day = img[445:492, 805:975]
     img_day = img[calib_day_y:calib_day_y +
                   calib_day_height, calib_day_x:calib_day_x+calib_day_width]
-    # if interactive: cv2.imshow("cropped img_day", img_day) #; cv2.waitKey(0)
+    # if interactive: cv2.imshow("cropped img_day", img_day) ; #cv2.waitKey(0)
+
+    # # testing the best threshold
+    # img_bck = np.copy(img_day)
+    # for t in range(80, 180, 20):
+    #     img_day = np.copy(img_bck)
+    #     _, img_day = cv2.threshold(img_day, t, 255, cv2.THRESH_BINARY)
+    #     if interactive: cv2.imshow(f"threshed {t}", img_day)
+    # cv2.waitKey(0)
+
+    best_threshold = 100
 
     # thresholding to get a black/white picture
-    _, img_day = cv2.threshold(img_day, 30, 255, cv2.THRESH_BINARY)
-    # if interactive: cv2.imshow("threshed", img_day); cv2.waitKey(0)
+    _, img_day = cv2.threshold(img_day, best_threshold, 255, cv2.THRESH_BINARY)
 
     # -------------
     # day_decimal
@@ -400,8 +409,7 @@ def cropped_digits_img(filename):
     # if interactive: cv2.imshow("cropped img_day_dec", img_day_dec_decimal) ; cv2.waitKey(0)
 
     # thresholding to get a black/white picture
-    _, img_day_decimal = cv2.threshold(
-        img_day_decimal, 30, 255, cv2.THRESH_BINARY)
+    _, img_day_decimal = cv2.threshold(img_day_decimal, best_threshold, 255, cv2.THRESH_BINARY)
     # if interactive: cv2.imshow("threshed day", img_day_decimal); cv2.waitKey(0)
 
     # -------------
@@ -413,7 +421,7 @@ def cropped_digits_img(filename):
     # if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
 
     # thresholding to get a black/white picture
-    _, img_night = cv2.threshold(img_night, 30, 255, cv2.THRESH_BINARY)
+    _, img_night = cv2.threshold(img_night, best_threshold, 255, cv2.THRESH_BINARY)
     # if interactive: cv2.imshow("threshed img_night", img_night)  #; cv2.waitKey(0)
 
     # -------------
@@ -425,7 +433,7 @@ def cropped_digits_img(filename):
 
     # thresholding to get a black/white picture
     _, img_night_decimal = cv2.threshold(
-        img_night_decimal, 30, 255, cv2.THRESH_BINARY)
+        img_night_decimal, best_threshold, 255, cv2.THRESH_BINARY)
     # if interactive: cv2.imshow("threshed night", img_night_decimal); cv2.waitKey(0)
 
     # -------------
@@ -545,8 +553,11 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
 
     # create a list of valid results only
     valid_results = []
+
+    # manual_mode = True (in parameters.py) if the figures are reset/checked manually after an interruption of the normal series
+
     for c in candidate_results:
-        # if interactive: print(f'{c[0]:35}: {c[1]}')
+        if interactive: print(f'{c[0]:35}: {c[1]}')
         st = c[1].strip().replace(" ", "")
         if len(st) >= 1 and st != "." and st.isnumeric:
             number = int(st)
@@ -557,14 +568,14 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                 # if number > 71000 and number < 72000:
                 if last_validated_val != None:
                     truncated = int(last_validated_val)
-                    if number >= int(last_validated_val)-1 and number <= last_validated_val+10:
+                    if (params.manual_mode and number > 71000 and number < 72000) or (number >= int(last_validated_val)-1 and number <= last_validated_val+10):
                         valid_results.append(st)
             elif kind == "night":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_night")
                 # if number > 65000 and number < 67000:
                 if last_validated_val != None:
-                    if number >= int(last_validated_val)-1 and number <= last_validated_val+10:
+                    if (params.manual_mode and number > 65000 and number < 66000) or (number >= int(last_validated_val)-1 and number <= last_validated_val+10):
                         valid_results.append(st)
             elif kind == "day_decimal":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
