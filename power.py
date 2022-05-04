@@ -65,7 +65,7 @@ calib_night_dec_height = params.calib_night_dec_height
 
 # export DISPLAY=localhost:xx.0
 
-os.environ["DISPLAY"] = "localhost:11.0"
+os.environ["DISPLAY"] = "localhost:10.0"
 print(os.environ["DISPLAY"] +
       " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
 
@@ -394,6 +394,7 @@ def cropped_digits_img(filename):
     #     img_day = np.copy(img_bck)
     #     _, img_day = cv2.threshold(img_day, t, 255, cv2.THRESH_BINARY)
     #     if interactive: cv2.imshow(f"threshed {t}", img_day)
+    # img_bck = np.copy(img_day)
     # cv2.waitKey(0)
 
     best_threshold = 100
@@ -559,6 +560,7 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
     for c in candidate_results:
         if interactive: print(f'{c[0]:35}: {c[1]}')
         st = c[1].strip().replace(" ", "")
+        st = c[1].strip().replace(".", "")
         if len(st) >= 1 and st != "." and st.isnumeric:
             number = int(st)
             # check the read figures make sense (sometimes a "7" is read as a "1" by tesseract)
