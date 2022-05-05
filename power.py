@@ -560,7 +560,7 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
     for c in candidate_results:
         if interactive: print(f'{c[0]:35}: {c[1]}')
         st = c[1].strip().replace(" ", "")
-        st = c[1].strip().replace(".", "")
+        st = st.strip().replace(".", "")
         if len(st) >= 1 and st != "." and st.isnumeric:
             number = int(st)
             # check the read figures make sense (sometimes a "7" is read as a "1" by tesseract)
@@ -570,14 +570,14 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                 # if number > 71000 and number < 72000:
                 if last_validated_val != None:
                     truncated = int(last_validated_val)
-                    if (params.manual_mode and number > 71000 and number < 72000) or (number >= int(last_validated_val)-1 and number <= last_validated_val+10):
+                    if (params.manual_mode and number >= params.manual_day and number <= params.manual_day+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+2):
                         valid_results.append(st)
             elif kind == "night":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_night")
                 # if number > 65000 and number < 67000:
                 if last_validated_val != None:
-                    if (params.manual_mode and number > 65000 and number < 66000) or (number >= int(last_validated_val)-1 and number <= last_validated_val+10):
+                    if (params.manual_mode and number >= params.manual_night and number <= params.manual_night+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+2):
                         valid_results.append(st)
             elif kind == "day_decimal":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
