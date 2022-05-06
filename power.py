@@ -493,8 +493,7 @@ def last_validated_value(categ):
 
     if (error != ""):
         short_error_msg = "events server unresponsive !!!"
-        long_error_msg(
-            f"!!!! Error : could not read the last {categ} event - {error}")
+        long_error_msg(f"!!!! Error : could not read the last {categ} event - {error}")
 
     # check that date is OK
     if short_error_msg == "":
@@ -571,14 +570,14 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                 if last_validated_val != None:
                     truncated = int(last_validated_val)
                     if (params.manual_mode and number >= params.manual_day and number <= params.manual_day+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+2):
-                        valid_results.append(st)
+                        valid_results.append(int(st))
             elif kind == "night":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_night")
                 # if number > 65000 and number < 67000:
                 if last_validated_val != None:
                     if (params.manual_mode and number >= params.manual_night and number <= params.manual_night+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+2):
-                        valid_results.append(st)
+                        valid_results.append(int(st))
             elif kind == "day_decimal":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_day")
@@ -587,7 +586,7 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                     if optional_non_decimal_part != None:
                         candidate_full_value = optional_non_decimal_part + number/10
                         if candidate_full_value >= last_validated_val:
-                            valid_results.append(st)
+                            valid_results.append(int(st))
             elif kind == "night_decimal":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_night")
@@ -596,7 +595,7 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                     if optional_non_decimal_part != None:
                         candidate_full_value = optional_non_decimal_part + number/10
                         if candidate_full_value >= last_validated_val:
-                            valid_results.append(st)
+                            valid_results.append(int(st))
 
     # remove duplicates from list of valid results
     valid_results = list(dict.fromkeys(valid_results))
@@ -607,29 +606,36 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
 
     if len(valid_results) == 0:
         # no valid results; store image for later analysis
-        number = None
+        best_candidate = None
         # print("No valid results !")
         # store image for later analysis :
         filename = issues_path + "noresult_decimal_" + now_str + ".jpg"
         cv2.imwrite(filename, img)
     else:
-        # at least one valid result; first one is kept and returned
-        st = valid_results[0]
-        number = int(st)
+        # at least one valid result; first one is kept, unless we find another one which is closer to the last_validated_val
+        best_candidate = valid_results[0]
+        prev_delta = abs(best_candidate - last_validated_val)
         # if there were more than 1 valid result
         if len(valid_results) > 1:
-            all_res = ""
-            for res in valid_results:
-                if all_res == "":
-                    all_res = res
+            all_candidates = ""
+            for candidate in valid_results:
+                # find the delta between this candidate and the previously stored value in the DB
+                delta = abs(candidate - last_validated_val)
+                if delta < prev_delta:
+                    best_candidate = candidate
+                    prev_delta = delta
+                    
+                # accumulate in all_candidates a string with all the candidate values, for later analysis
+                if all_candidates == "":
+                    all_candidates = str(candidate)
                 else:
-                    all_res = all_res + "_" + res
-            print("more than 1 valid result : ", all_res)
+                    all_candidates = all_candidates + "_" + str(candidate)
+            logging.info(f'more than 1 valid result : {all_candidates}')
             # store image for later analysis :
-            filename = issues_path + "ambiguous_" + all_res + "_" + now_str + ".jpg"
+            filename = issues_path + "ambiguous_" + all_candidates + "_" + now_str + ".jpg"
             cv2.imwrite(filename, img)
 
-    return number
+    return best_candidate
 
 
 def optimise_img(img):
