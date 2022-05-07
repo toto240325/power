@@ -302,7 +302,7 @@ def get_cam_footage(basename):
     return footage_filename
 
 
-def get_snapshot(footage_filename):
+def get_snapshot_old(footage_filename):
     """
     extract a snapshot from <basename>.h264 and put it in <basename>.jpg
     """
@@ -310,8 +310,8 @@ def get_snapshot(footage_filename):
     if footage_filename == None:
         return None
     try_again = True
-    i = 0
-    max_iteration = 10
+    i = 1
+    max_iteration = 1
     basename_ext = os.path.basename(footage_filename)
     basename, ext = os.path.splitext(basename_ext)
     while try_again and i <= max_iteration:
@@ -347,6 +347,38 @@ def get_snapshot(footage_filename):
         os.rename(f'{basename}.h264', f'{basename}.bak.h264')
 
     if i <= max_iteration:
+        extracted_img_filename = f'{basename}.jpg'
+    else:
+        extracted_img_filename = None
+
+    return extracted_img_filename
+
+
+def get_snapshot(footage_filename):
+    """
+    extract a snapshot from <basename>.h264 and put it in <basename>.jpg
+    """
+
+    if footage_filename == None:
+        return None
+    basename_ext = os.path.basename(footage_filename)
+    basename, ext = os.path.splitext(basename_ext)
+    # extract a picture from that video
+    process = subprocess.run(
+        ['ffmpeg', '-y', '-i', f'{basename}.h264',
+            '-frames:v', '1', f'{basename}.jpg'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        universal_newlines=True)
+    my_stdout = process.stdout
+    err = process.stderr
+    # print("----args = ", process.args)
+    # print("----rc = ", process.returncode)
+    # print("----stdout = ", my_stdout)
+    # print("----err = ", err)
+
+    if os.path.isfile(f'{basename}.jpg'):
+        os.rename(f'{basename}.h264', f'{basename}.bak.h264')
         extracted_img_filename = f'{basename}.jpg'
     else:
         extracted_img_filename = None
@@ -614,9 +646,9 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
     else:
         # at least one valid result; first one is kept, unless we find another one which is closer to the last_validated_val
         best_candidate = valid_results[0]
-        prev_delta = abs(best_candidate - last_validated_val)
         # if there were more than 1 valid result
         if len(valid_results) > 1:
+            prev_delta = abs(best_candidate - last_validated_val)
             all_candidates = ""
             for candidate in valid_results:
                 # find the delta between this candidate and the previously stored value in the DB
@@ -774,8 +806,19 @@ def check_power():
     global interactive
 
     basename = "power_base"
-    get_cam_footage("tmp_"+basename)
-    successful = get_snapshot("tmp_"+basename)
+
+    successful = False
+    i = 1
+    max_iteration = 10
+    while not successful and i <= max_iteration:
+        footage_filename = get_cam_footage("tmp_"+basename)
+        if footage_filename != None:
+            successful = get_snapshot("tmp_"+basename)
+        else:
+            logging.error(f'iter {i} : failed to get footage')
+        if not successful:
+            logging.error(f'iter {i} : failed to get snapshot out of footage')
+        i+=1
 
     if successful:
         debug = False
