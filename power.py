@@ -43,6 +43,12 @@ import utils
 import params
 # from audioop import add
 
+# export DISPLAY=localhost:xx.0
+os.environ["DISPLAY"] = "localhost:10.0"
+print(os.environ["DISPLAY"] +
+      " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
+
+
 calib_day_x = params.calib_day_x
 calib_day_y = params.calib_day_y
 calib_day_width = params.calib_day_width
@@ -63,24 +69,20 @@ calib_night_dec_y = params.calib_night_dec_y
 calib_night_dec_width = params.calib_night_dec_width
 calib_night_dec_height = params.calib_night_dec_height
 
-# export DISPLAY=localhost:xx.0
-
-os.environ["DISPLAY"] = "localhost:10.0"
-print(os.environ["DISPLAY"] +
-      " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
-
 
 def set_calibration(img, x, y, width, height):
     """"
     allows to move a rectangle on top of a given image and returns the x,y coordinates of the top left corner 
     of the rectangle
     """
-    dist = 10  # distance (in pixels) to move the rectangle with each move
+    dist = 3  # distance (in pixels) to move the rectangle with each move
     mode = "P"   # P: arrows change position    S: arrows change size
     window_name = "with rectangle"
     flags = cv2.WINDOW_NORMAL
     # flags = cv2.WINDOW_AUTOSIZE
     cv2.namedWindow(window_name, flags)
+    # cv2.moveWindow(window_name, 10,10)
+    # cv2.resizeWindow(window_name, 600, 500)
     while True:
         img2 = np.copy(img)
         mytext = f'({x},{y}) width:{width} height:{height} - dist (+/-) : {dist} - Mode:{mode}'
@@ -278,7 +280,7 @@ def get_cam_footage(basename):
     """
     process = subprocess.run(
         ['openRTSP', '-d', '1', '-V', '-F',
-            f'{basename}-', 'rtsp://admin:123456@192.168.0.91/'],
+            f'{basename}-', 'rtsp://admin:123456@webcamGarage/'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True)
