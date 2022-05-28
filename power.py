@@ -70,19 +70,19 @@ calib_night_dec_width = params.calib_night_dec_width
 calib_night_dec_height = params.calib_night_dec_height
 
 
-def set_calibration(img, x, y, width, height):
+def set_calibration(title, img, x, y, width, height):
     """"
     allows to move a rectangle on top of a given image and returns the x,y coordinates of the top left corner 
     of the rectangle
     """
     dist = 3  # distance (in pixels) to move the rectangle with each move
     mode = "P"   # P: arrows change position    S: arrows change size
-    window_name = "with rectangle"
-    flags = cv2.WINDOW_NORMAL
-    # flags = cv2.WINDOW_AUTOSIZE
+    window_name = title
+    flags = cv2.WINDOW_NORMAL & cv2.WINDOW_KEEPRATIO
+    #flags = cv2.WINDOW_AUTOSIZE
     cv2.namedWindow(window_name, flags)
-    # cv2.moveWindow(window_name, 10,10)
-    # cv2.resizeWindow(window_name, 600, 500)
+    cv2.resizeWindow(window_name, 1800, 1000)
+    cv2.moveWindow(window_name, 10,10)
     while True:
         img2 = np.copy(img)
         mytext = f'({x},{y}) width:{width} height:{height} - dist (+/-) : {dist} - Mode:{mode}'
@@ -118,17 +118,25 @@ def set_calibration(img, x, y, width, height):
         elif k == -1:  # normally -1 returned,so don't print it
             continue
         elif k == up:
-            if mode == "P": y -= dist
-            else: height -= dist
+            if mode == "P":
+                y -= dist
+            else:
+                height -= dist
         elif k == down:
-            if mode == "P": y += dist
-            else: height += dist
+            if mode == "P":
+                y += dist
+            else:
+                height += dist
         elif k == left:
-            if mode == "P": x -= dist
-            else: width -= dist
+            if mode == "P":
+                x -= dist
+            else:
+                width -= dist
         elif k == right:
-            if mode == "P": x += dist
-            else: width += dist
+            if mode == "P":
+                x += dist
+            else:
+                width += dist
         elif k == plus:
             dist += 1
         elif k == minus:
@@ -143,10 +151,9 @@ def set_calibration(img, x, y, width, height):
     return x, y, width, height
 
 
-
 # def set_calibration_power(img, x, y, width, height):
 #     """"
-#     allows to move a rectangle on top of a given image and returns the x,y coordinates of the top left corner 
+#     allows to move a rectangle on top of a given image and returns the x,y coordinates of the top left corner
 #     of the rectangle
 #     """
 #     dist = 3  # distance (in pixels) to move the rectangle with each move
@@ -201,7 +208,6 @@ def set_calibration(img, x, y, width, height):
 #     return x, y
 
 
-
 # def get_cam_footage(basename):
 #     """
 #     get 1 second of video from the chalet Webcam and put it in <basename>.h264
@@ -225,11 +231,10 @@ def set_calibration(img, x, y, width, height):
 #     video_file = f'{basename}-video-H264-1'
 #     if os.path.isfile(video_file):
 #         os.rename(video_file, f'{basename}.h264')
-    
+
 #     audio_file = f'{basename}-audio-PCMA-2'
 #     if os.path.isfile(audio_file):
 #         os.remove(audio_file)
-
 
 
 # def get_snapshot(basename):
@@ -253,9 +258,9 @@ def set_calibration(img, x, y, width, height):
 #         # print("----rc = ", process.returncode)
 #         # print("----stdout = ", my_stdout)
 #         # print("----err = ", err)
-        
+
 #         # try_again = (
-#         #     (err.find("Output file is empty") != -1) 
+#         #     (err.find("Output file is empty") != -1)
 #         #     or
 #         #     (err.find("Conversion failed!") != -1)
 #         # )
@@ -339,7 +344,8 @@ def get_snapshot_old(footage_filename):
         # continue until a jpg is produced (which doesn't happen if the .h264 file is corrupted or empty)
         try_again = (not os.path.isfile(f'{basename}.jpg'))
 
-        if try_again: time.sleep(1)
+        if try_again:
+            time.sleep(1)
         i += 1
 
     logging.info(f"nb_iteration : {i}")
@@ -422,7 +428,7 @@ def cropped_digits_img(filename):
                   calib_day_height, calib_day_x:calib_day_x+calib_day_width]
     # if interactive: cv2.imshow("cropped img_day", img_day) ; #cv2.waitKey(0)
 
-    # # testing the best threshold
+    # # # testing the best threshold
     # img_bck = np.copy(img_day)
     # for t in range(80, 180, 20):
     #     img_day = np.copy(img_bck)
@@ -431,7 +437,7 @@ def cropped_digits_img(filename):
     # img_bck = np.copy(img_day)
     # cv2.waitKey(0)
 
-    best_threshold = 100
+    best_threshold = 120
 
     # thresholding to get a black/white picture
     _, img_day = cv2.threshold(img_day, best_threshold, 255, cv2.THRESH_BINARY)
@@ -444,7 +450,8 @@ def cropped_digits_img(filename):
     # if interactive: cv2.imshow("cropped img_day_dec", img_day_dec_decimal) ; cv2.waitKey(0)
 
     # thresholding to get a black/white picture
-    _, img_day_decimal = cv2.threshold(img_day_decimal, best_threshold, 255, cv2.THRESH_BINARY)
+    _, img_day_decimal = cv2.threshold(
+        img_day_decimal, best_threshold, 255, cv2.THRESH_BINARY)
     # if interactive: cv2.imshow("threshed day", img_day_decimal); cv2.waitKey(0)
 
     # -------------
@@ -455,8 +462,20 @@ def cropped_digits_img(filename):
                     calib_night_height, calib_night_x:calib_night_x+calib_night_width]
     # if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
 
+    # # testing the best threshold
+    # img_bck = np.copy(img_night)
+    # for t in range(80, 180, 20):
+    #     img_night = np.copy(img_bck)
+    #     _, img_night = cv2.threshold(img_night, t, 255, cv2.THRESH_BINARY)
+    #     if interactive: cv2.imshow(f"threshed {t}", img_night)
+    # img_bck = np.copy(img_night)
+    # cv2.waitKey(0)
+
+    best_threshold = 100
+
     # thresholding to get a black/white picture
-    _, img_night = cv2.threshold(img_night, best_threshold, 255, cv2.THRESH_BINARY)
+    _, img_night = cv2.threshold(
+        img_night, best_threshold, 255, cv2.THRESH_BINARY)
     # if interactive: cv2.imshow("threshed img_night", img_night)  #; cv2.waitKey(0)
 
     # -------------
@@ -499,18 +518,18 @@ def get_digits(img_name, img, options_list):
     return process.stdout.strip()
 
 
-def check_digits(st):
-    """
-    checks if string st contains 3 digits, then a space, then 3 digits, and 
-    return the corresponding int values (day and night) if that's the case, or None otherwise
-    """
-    st = st.strip()
-    day = None
-    night = None
-    if len(st) == 7 and st[0:3].isnumeric and st[-3:].isnumeric:
-        day = int(st[0:3])/100.0
-        night = int(st[-3:])
-    return day, night
+# def check_digits_old(st):
+#     """
+#     checks if string st contains 3 digits, then a space, then 3 digits, and
+#     return the corresponding int values (day and night) if that's the case, or None otherwise
+#     """
+#     st = st.strip()
+#     day = None
+#     night = None
+#     if len(st) == 7 and st[0:3].isnumeric and st[-3:].isnumeric:
+#         day = int(st[0:3])/100.0
+#         night = int(st[-3:])
+#     return day, night
 
 
 def last_validated_value(categ):
@@ -527,7 +546,8 @@ def last_validated_value(categ):
 
     if (error != ""):
         short_error_msg = "events server unresponsive !!!"
-        long_error_msg(f"!!!! Error : could not read the last {categ} event - {error}")
+        long_error_msg(
+            f"!!!! Error : could not read the last {categ} event - {error}")
 
     # check that date is OK
     if short_error_msg == "":
@@ -560,7 +580,7 @@ def last_validated_value(categ):
         htmlbody = None
         myfilename = None
         utils.mySend(user_name, passwd, from_email,
-                          to_email, subject, body, htmlbody, myfilename)
+                     to_email, subject, body, htmlbody, myfilename)
 
     return validated_value
 
@@ -591,7 +611,8 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
     # manual_mode = True (in parameters.py) if the figures are reset/checked manually after an interruption of the normal series
 
     for c in candidate_results:
-        if interactive: print(f'{c[0]:35}: {c[1]}')
+        if interactive:
+            print(f'{c[0]:35}: {c[1]}')
         st = c[1].strip().replace(" ", "")
         st = st.strip().replace(".", "")
         if len(st) >= 1 and st != "." and st.isnumeric:
@@ -658,7 +679,7 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                 if delta < prev_delta:
                     best_candidate = candidate
                     prev_delta = delta
-                    
+
                 # accumulate in all_candidates a string with all the candidate values, for later analysis
                 if all_candidates == "":
                     all_candidates = str(candidate)
@@ -703,6 +724,24 @@ def optimise_img(img):
     return img
 
 
+def display_boxes(img, options_str, nb_lines):
+
+    hImg, wImg = img.shape
+    boxes = pytesseract.image_to_boxes(img, config=options_str)
+
+    for b in boxes.splitlines():
+        # print(b)
+        b = b.split(' ')
+        # print(b)
+        x, y, w, h = int(b[1]), int(b[2]), int(b[3]), int(b[4])
+        cv2.rectangle(img, (x, hImg-y+nb_lines),
+                      (w, hImg-h+nb_lines), (0, 255, 0), 2)
+        cv2.putText(img, b[0], (x, hImg-y+25+nb_lines),
+                    cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+
+    cv2.imshow('Image with boxes', img)
+
+
 def explain_tesseract(img, title, options_str, candidate_results):
     """
     explains the tesseract way of analysing this image by having boxes drawn around the characters
@@ -717,29 +756,19 @@ def explain_tesseract(img, title, options_str, candidate_results):
 
     # if interactive: cv2.imshow("img extended", img2)
 
-    hImg, wImg = img.shape
     # print("pytesseract options", options_str)
     myres = pytesseract.image_to_string(img, config=options_str).strip()
     candidate_results.append([f'{title} (orig size)', myres])
     #if interactive: print("pytesseract (orig): ", myres)
+
     myres2 = pytesseract.image_to_string(img2, config=options_str).strip()
     candidate_results.append([f'{title} (extended)', myres2])
     #if interactive: print("pytesseract (extended): ", myres2)
 
-    boxes = pytesseract.image_to_boxes(img, config=options_str)
-
-    for b in boxes.splitlines():
-        # print(b)
-        b = b.split(' ')
-        # print(b)
-        x, y, w, h = int(b[1]), int(b[2]), int(b[3]), int(b[4])
-        cv2.rectangle(img2, (x, hImg-y+nb_lines),
-                      (w, hImg-h+nb_lines), (0, 255, 0), 2)
-        cv2.putText(img2, b[0], (x, hImg-y+25+nb_lines),
-                    cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-
-    # if interactive: cv2.imshow('Image with boxes', img2)
-    # cv2.waitKey(0)
+    # if interactive:
+    #     display_boxes(img, options_str, 0)
+    #     display_boxes(img2, options_str, nb_lines)
+    #     cv2.waitKey(0)
 
 
 def write_gray_to_file(img_name, img):
@@ -820,7 +849,7 @@ def check_power():
             logging.error(f'iter {i} : failed to get footage')
         if not successful:
             logging.error(f'iter {i} : failed to get snapshot out of footage')
-        i+=1
+        i += 1
 
     if successful:
         debug = False
@@ -831,8 +860,8 @@ def check_power():
         else:
             filename = "tmp_"+basename+'.jpg'
             filename_bak = "tmp_"+basename+'.bak.jpg'
-            img_day, img_night, img_day_decimal, img_night_decimal = cropped_digits_img(
-                filename)
+            img_day, img_night, img_day_decimal, img_night_decimal = \
+                cropped_digits_img(filename)
             os.rename(filename, filename_bak)
 
         if interactive:
@@ -922,11 +951,11 @@ def calibration_power_day():
         img = cv2.imread(img_filename)
         # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-    if isinstance(img,np.ndarray) and img.any() != None:
+    if isinstance(img, np.ndarray) and img.any() != None:
 
-        basename = "power_day_base"
+        title = "power_day_base"
         calib_day_x, calib_day_y, calib_day_width, calib_day_height = set_calibration(
-            img, calib_day_x, calib_day_y, calib_day_width, calib_day_height)
+            title, img, calib_day_x, calib_day_y, calib_day_width, calib_day_height)
         utils.replace_param("params.py", "calib_day_x", calib_day_x)
         utils.replace_param("params.py", "calib_day_y", calib_day_y)
         utils.replace_param("params.py", "calib_day_width", calib_day_width)
@@ -934,33 +963,41 @@ def calibration_power_day():
         logging.info(
             f'day : x:{calib_day_x}, y:{calib_day_y}, width:{calib_day_width}, height:{calib_day_height}')
 
-        basename = "power_night_base"
+        title = "power_night_base"
         calib_night_x, calib_night_y, calib_night_width, calib_night_height = set_calibration(
-            img, calib_night_x, calib_night_y, calib_night_width, calib_night_height)
+            title, img, calib_night_x, calib_night_y, calib_night_width, calib_night_height)
         utils.replace_param("params.py", "calib_night_x", calib_night_x)
         utils.replace_param("params.py", "calib_night_y", calib_night_y)
-        utils.replace_param("params.py", "calib_night_width", calib_night_width)
-        utils.replace_param("params.py", "calib_night_height", calib_night_height)
+        utils.replace_param(
+            "params.py", "calib_night_width", calib_night_width)
+        utils.replace_param(
+            "params.py", "calib_night_height", calib_night_height)
         logging.info(
             f'night : x:{calib_night_x}, y:{calib_night_y}, width:{calib_night_width}, height:{calib_night_height}')
 
-        basename = "power_day_dec_base"
+        title = "power_day_dec_base"
         calib_day_dec_x, calib_day_dec_y, calib_day_dec_width, calib_day_dec_height = set_calibration(
-            img, calib_day_dec_x, calib_day_dec_y, calib_day_dec_width, calib_day_dec_height)
+            title, img, calib_day_dec_x, calib_day_dec_y, calib_day_dec_width, calib_day_dec_height)
         utils.replace_param("params.py", "calib_day_dec_x", calib_day_dec_x)
         utils.replace_param("params.py", "calib_day_dec_y", calib_day_dec_y)
-        utils.replace_param("params.py", "calib_day_dec_width", calib_day_dec_width)
-        utils.replace_param("params.py", "calib_day_dec_height", calib_day_dec_height)
+        utils.replace_param(
+            "params.py", "calib_day_dec_width", calib_day_dec_width)
+        utils.replace_param(
+            "params.py", "calib_day_dec_height", calib_day_dec_height)
         logging.info(
             f'day_dec : x:{calib_day_dec_x}, y:{calib_day_dec_y}, width:{calib_day_dec_width}, height:{calib_day_dec_height}')
 
-        basename = "power_night_dec_base"
+        title = "power_night_dec_base"
         calib_night_dec_x, calib_night_dec_y, calib_night_dec_width, calib_night_dec_height = set_calibration(
-            img, calib_night_dec_x, calib_night_dec_y, calib_night_dec_width, calib_night_dec_height)
-        utils.replace_param("params.py", "calib_night_dec_x", calib_night_dec_x)
-        utils.replace_param("params.py", "calib_night_dec_y", calib_night_dec_y)
-        utils.replace_param("params.py", "calib_night_dec_width", calib_night_dec_width)
-        utils.replace_param("params.py", "calib_night_dec_height", calib_night_dec_height)
+            title, img, calib_night_dec_x, calib_night_dec_y, calib_night_dec_width, calib_night_dec_height)
+        utils.replace_param(
+            "params.py", "calib_night_dec_x", calib_night_dec_x)
+        utils.replace_param(
+            "params.py", "calib_night_dec_y", calib_night_dec_y)
+        utils.replace_param(
+            "params.py", "calib_night_dec_width", calib_night_dec_width)
+        utils.replace_param(
+            "params.py", "calib_night_dec_height", calib_night_dec_height)
         logging.info(
             f'night_dec : x:{calib_night_dec_x}, y:{calib_night_dec_y}, width:{calib_night_dec_width}, height:{calib_night_dec_height}')
 
@@ -977,14 +1014,14 @@ def calibration_power_day():
 def print_usage():
     print("Usage : ")
     print(" python power.py         : get the power figures and display them on stdout")
-    # print(" python power.py where [[[ categ ] nb ] date_from ]     : prints the most recent ps4 powers")  
-    print(" python power.py calib   : recalibrate the cropping of the image")  
+    # print(" python power.py where [[[ categ ] nb ] date_from ]     : prints the most recent ps4 powers")
+    print(" python power.py calib   : recalibrate the cropping of the image")
     print(" python power.py anythingelse : print this usage")
 
 
 def main():
     utils.init_logger('INFO')
-    logging.info("------------------------------------------------------------")
+    logging.info("-----------------------------------------------------------")
     logging.info("Starting power")
 
     nb_args = len(sys.argv)

@@ -10,6 +10,8 @@
             "request": "launch",
             "program": "${file}",
             //"args": [ "calib" ],
+            // # sshagent
+            // # scp params.py sd3:/tmp/params_power.py; ssh -t sd3 "sudo cp /tmp/params_power.py /opt/power/params.py"
             "console": "integratedTerminal",
             "justMyCode": true
         }
