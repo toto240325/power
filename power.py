@@ -48,7 +48,7 @@ os.environ["DISPLAY"] = "localhost:10.0"
 print(os.environ["DISPLAY"] +
       " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
 
-
+webcam = params.webcam
 calib_day_x = params.calib_day_x
 calib_day_y = params.calib_day_y
 calib_day_width = params.calib_day_width
@@ -74,6 +74,7 @@ def set_calibration(title, img, x, y, width, height):
     """"
     allows to move a rectangle on top of a given image and returns the x,y coordinates of the top left corner 
     of the rectangle
+    (this function should be identifical between pool and power)
     """
     dist = 3  # distance (in pixels) to move the rectangle with each move
     mode = "P"   # P: arrows change position    S: arrows change size
@@ -145,147 +146,17 @@ def set_calibration(title, img, x, y, width, height):
             mode = "P" if mode == "V" else "V"
         else:
             print(k)  # else print its value
-
     cv2.destroyAllWindows()
-
     return x, y, width, height
 
-
-# def set_calibration_power(img, x, y, width, height):
-#     """"
-#     allows to move a rectangle on top of a given image and returns the x,y coordinates of the top left corner
-#     of the rectangle
-#     """
-#     dist = 3  # distance (in pixels) to move the rectangle with each move
-#     while True:
-#         img2 = np.copy(img)
-#         cv2.putText(img=img2, text=f'Hello {y} - dist : {dist}', org=(
-#             50, 50), fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=2, color=(0, 255, 0), thickness=1)
-
-#         cv2.rectangle(img2, (x, y), (x + width, y + height), (255, 0, 0), 2)
-#         cv2.imshow("with rectangle", img2)
-#         k = cv2.waitKeyEx(0)
-
-#         # print(k)
-
-#         myenv = "Windows"
-#         if myenv == "Windows":
-#             esc = 27
-#             up = 2490368
-#             down = 2621440
-#             left = 2424832
-#             right = 2555904
-#             plus = 43
-#             minus = 45
-#         if myenv == "Linux":
-#             esc = 27
-#             up = 82
-#             down = 84
-#             left = 81
-#             right = 83
-#             # plus = 43
-#             # minus = 45
-
-#         if k == esc:
-#             break
-#         elif k == -1:  # normally -1 returned,so don't print it
-#             continue
-#         elif k == up:
-#             y -= dist
-#         elif k == down:
-#             y += dist
-#         elif k == left:
-#             x -= dist
-#         elif k == right:
-#             x += dist
-#         elif k == plus:
-#             dist += 1
-#         elif k == minus:
-#             dist -= 1
-#         else:
-#             print(k)  # else print its value
-
-#     return x, y
-
-
-# def get_cam_footage(basename):
-#     """
-#     get 1 second of video from the chalet Webcam and put it in <basename>.h264
-#     """
-#     process = subprocess.run(
-#         ['openRTSP', '-d', '1', '-V', '-F',
-#             f'{basename}-', 'rtsp://admin:123456@192.168.0.91/'],
-#         stdout=subprocess.PIPE,
-#         stderr=subprocess.PIPE,
-#         universal_newlines=True)
-#     # print("rc = ", process.returncode)
-#     # print("result = ", process.stdout)
-#     # err = process.stderr
-#     # # print("err = ", process.stderr)
-#     # $ cp chalet-video-H264-1 a.h264
-#     # $ vlc a.h264
-
-#     # os.rename(f'{basename}-video-H264-1', f'{basename}.h264')
-#     # os.remove(f'{basename}-audio-PCMA-2')
-
-#     video_file = f'{basename}-video-H264-1'
-#     if os.path.isfile(video_file):
-#         os.rename(video_file, f'{basename}.h264')
-
-#     audio_file = f'{basename}-audio-PCMA-2'
-#     if os.path.isfile(audio_file):
-#         os.remove(audio_file)
-
-
-# def get_snapshot(basename):
-#     """
-#     extract a snapshot from <basename>.h264 and put it in <basename>.jpg
-#     """
-#     try_again = True
-#     i = 0
-#     max_iteration = 10
-#     while try_again and i <= max_iteration:
-#         # extra a picture from that video
-#         process = subprocess.run(
-#             ['ffmpeg', '-y', '-i', f'{basename}.h264',
-#                 '-frames:v', '1', f'{basename}.jpg'],
-#             stdout=subprocess.PIPE,
-#             stderr=subprocess.PIPE,
-#             universal_newlines=True)
-#         my_stdout = process.stdout
-#         err = process.stderr
-#         # print("----args = ", process.args)
-#         # print("----rc = ", process.returncode)
-#         # print("----stdout = ", my_stdout)
-#         # print("----err = ", err)
-
-#         # try_again = (
-#         #     (err.find("Output file is empty") != -1)
-#         #     or
-#         #     (err.find("Conversion failed!") != -1)
-#         # )
-#         # continue until a jpg is produced (which doesn't happen if the .h264 file is corrupted or empty)
-#         try_again = (not os.path.isfile(f'{basename}.jpg'))
-
-#         i += 1
-#         time.sleep(1)
-
-#     logging.info(f"nb_iteration : {i}")
-#     if i > max_iteration:
-#         logging.info("!!!!!!!! couldn't extract snapshot from footage !!!!!")
-#     else:
-#         os.rename(f'{basename}.h264', f'{basename}.bak.h264')
-
-#     return i <= max_iteration
-
-
-def get_cam_footage(basename):
+def get_cam_footage(basename, webcam):
     """
     get 1 second of video from the chalet Webcam and put it in <basename>.h264
+    (this function should be identifical between pool and power)
     """
     process = subprocess.run(
         ['openRTSP', '-d', '1', '-V', '-F',
-            f'{basename}-', 'rtsp://admin:123456@webcamGarage/'],
+            f'{basename}-', webcam],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True)
@@ -309,62 +180,10 @@ def get_cam_footage(basename):
     return footage_filename
 
 
-def get_snapshot_old(footage_filename):
-    """
-    extract a snapshot from <basename>.h264 and put it in <basename>.jpg
-    """
-
-    if footage_filename == None:
-        return None
-    try_again = True
-    i = 1
-    max_iteration = 1
-    basename_ext = os.path.basename(footage_filename)
-    basename, ext = os.path.splitext(basename_ext)
-    while try_again and i <= max_iteration:
-        # extra a picture from that video
-        process = subprocess.run(
-            ['ffmpeg', '-y', '-i', f'{basename}.h264',
-                '-frames:v', '1', f'{basename}.jpg'],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True)
-        my_stdout = process.stdout
-        err = process.stderr
-        # print("----args = ", process.args)
-        # print("----rc = ", process.returncode)
-        # print("----stdout = ", my_stdout)
-        # print("----err = ", err)
-
-        # try_again = (
-        #     (err.find("Output file is empty") != -1)
-        #     or
-        #     (err.find("Conversion failed!") != -1)
-        # )
-        # continue until a jpg is produced (which doesn't happen if the .h264 file is corrupted or empty)
-        try_again = (not os.path.isfile(f'{basename}.jpg'))
-
-        if try_again:
-            time.sleep(1)
-        i += 1
-
-    logging.info(f"nb_iteration : {i}")
-    if i > max_iteration:
-        logging.error("!!!!!!!! couldn't extract snapshot from footage !!!!!")
-    else:
-        os.rename(f'{basename}.h264', f'{basename}.bak.h264')
-
-    if i <= max_iteration:
-        extracted_img_filename = f'{basename}.jpg'
-    else:
-        extracted_img_filename = None
-
-    return extracted_img_filename
-
-
 def get_snapshot(footage_filename):
     """
     extract a snapshot from <basename>.h264 and put it in <basename>.jpg
+    (this function should be identifical between pool and power)
     """
 
     if footage_filename == None:
@@ -394,8 +213,11 @@ def get_snapshot(footage_filename):
     return extracted_img_filename
 
 
-def cropped_digits_img(filename):
+def cropped_digits_power_img(filename):
     global interactive
+
+    basename_ext = os.path.basename(filename)
+    basename, ext = os.path.splitext(basename_ext)
 
     # read the snapshot
     img = cv2.imread(filename)
@@ -410,20 +232,9 @@ def cropped_digits_img(filename):
     img = (255-img)
     # if interactive: cv2.imshow("greyed inverted", img)  #; cv2.waitKey(0)
 
-    # calib_x = 805
-    # calib_width = 170
-    # calib_day_y = 445
-    # calib_day_height = 47
-    # calib_night_y = calib_day_y+85
-    # calib_night_height = 40
-    # calib_dec_start = 172
-    # calib_dec_width = 20
-    # calib_night_decimal_height = 40-4
-
     # -------------
     # day figures
     # Crop the image to focus on the digits
-    #img_day = img[445:492, 805:975]
     img_day = img[calib_day_y:calib_day_y +
                   calib_day_height, calib_day_x:calib_day_x+calib_day_width]
     # if interactive: cv2.imshow("cropped img_day", img_day) ; #cv2.waitKey(0)
@@ -516,20 +327,6 @@ def get_digits(img_name, img, options_list):
     # err = process.stderr
     # print("err = ", process.stderr)
     return process.stdout.strip()
-
-
-# def check_digits_old(st):
-#     """
-#     checks if string st contains 3 digits, then a space, then 3 digits, and
-#     return the corresponding int values (day and night) if that's the case, or None otherwise
-#     """
-#     st = st.strip()
-#     day = None
-#     night = None
-#     if len(st) == 7 and st[0:3].isnumeric and st[-3:].isnumeric:
-#         day = int(st[0:3])/100.0
-#         night = int(st[-3:])
-#     return day, night
 
 
 def last_validated_value(categ):
@@ -832,7 +629,7 @@ def display_candidate_results(candidate_results):
             print(f'{c[0]:35}: {c[1]}')
 
 
-def check_power():
+def check_power(webcam):
     global candidate_results
     global interactive
 
@@ -842,7 +639,7 @@ def check_power():
     i = 1
     max_iteration = 10
     while not successful and i <= max_iteration:
-        footage_filename = get_cam_footage("tmp_"+basename)
+        footage_filename = get_cam_footage("tmp_"+basename, webcam)
         if footage_filename != None:
             successful = get_snapshot("tmp_"+basename)
         else:
@@ -861,7 +658,7 @@ def check_power():
             filename = "tmp_"+basename+'.jpg'
             filename_bak = "tmp_"+basename+'.bak.jpg'
             img_day, img_night, img_day_decimal, img_night_decimal = \
-                cropped_digits_img(filename)
+                cropped_digits_power_img(filename)
             os.rename(filename, filename_bak)
 
         if interactive:
@@ -944,7 +741,7 @@ def calibration_power_day():
     global calib_night_dec_x, calib_night_dec_y, calib_night_dec_width, calib_night_dec_height
 
     basename = "power"
-    footage_filename = get_cam_footage(basename)
+    footage_filename = get_cam_footage(basename, webcam)
     img_filename = get_snapshot(footage_filename)
     img = None
     if img_filename != None and os.path.isfile(img_filename):
@@ -1035,7 +832,7 @@ def main():
         else:
             print_usage()
 
-    day, night = check_power()
+    day, night = check_power(webcam)
     if day != None or night != None:
         logging.info(f'day : {day} - night : {night}')
     else:
