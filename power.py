@@ -49,6 +49,9 @@ print(os.environ["DISPLAY"] +
       " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
 
 webcam = params.webcam
+
+calib_step = params.calib_step
+
 calib_day_x = params.calib_day_x
 calib_day_y = params.calib_day_y
 calib_day_width = params.calib_day_width
@@ -59,15 +62,15 @@ calib_night_y = params.calib_night_y
 calib_night_width = params.calib_night_width
 calib_night_height = params.calib_night_height
 
-calib_day_dec_x = params.calib_day_dec_x
-calib_day_dec_y = params.calib_day_dec_y
-calib_day_dec_width = params.calib_day_dec_width
-calib_day_dec_height = params.calib_day_dec_height
+calib_day_decimal_x = params.calib_day_decimal_x
+calib_day_decimal_y = params.calib_day_decimal_y
+calib_day_decimal_width = params.calib_day_decimal_width
+calib_day_decimal_height = params.calib_day_decimal_height
 
-calib_night_dec_x = params.calib_night_dec_x
-calib_night_dec_y = params.calib_night_dec_y
-calib_night_dec_width = params.calib_night_dec_width
-calib_night_dec_height = params.calib_night_dec_height
+calib_night_decimal_x = params.calib_night_decimal_x
+calib_night_decimal_y = params.calib_night_decimal_y
+calib_night_decimal_width = params.calib_night_decimal_width
+calib_night_decimal_height = params.calib_night_decimal_height
 
 
 def set_calibration(title, img, x, y, width, height):
@@ -76,7 +79,7 @@ def set_calibration(title, img, x, y, width, height):
     of the rectangle
     (this function should be identifical between pool and power)
     """
-    dist = 3  # distance (in pixels) to move the rectangle with each move
+    calib_step = 3  # calib_stepance (in pixels) to move the rectangle with each move
     mode = "P"   # P: arrows change position    S: arrows change size
     window_name = title
     flags = cv2.WINDOW_NORMAL & cv2.WINDOW_KEEPRATIO
@@ -86,7 +89,7 @@ def set_calibration(title, img, x, y, width, height):
     cv2.moveWindow(window_name, 10,10)
     while True:
         img2 = np.copy(img)
-        mytext = f'({x},{y}) width:{width} height:{height} - dist (+/-) : {dist} - Mode:{mode}'
+        mytext = f'({x},{y}) width:{width} height:{height} - calib_step (+/-) : {calib_step} - Mode:{mode}'
         cv2.putText(img=img2, text=mytext, org=(
             50, 50), fontFace=cv2.FONT_HERSHEY_TRIPLEX, fontScale=1, color=(0, 255, 0), thickness=1)
 
@@ -120,28 +123,28 @@ def set_calibration(title, img, x, y, width, height):
             continue
         elif k == up:
             if mode == "P":
-                y -= dist
+                y -= calib_step
             else:
-                height -= dist
+                height -= calib_step
         elif k == down:
             if mode == "P":
-                y += dist
+                y += calib_step
             else:
-                height += dist
+                height += calib_step
         elif k == left:
             if mode == "P":
-                x -= dist
+                x -= calib_step
             else:
-                width -= dist
+                width -= calib_step
         elif k == right:
             if mode == "P":
-                x += dist
+                x += calib_step
             else:
-                width += dist
+                width += calib_step
         elif k == plus:
-            dist += 1
+            calib_step += 1
         elif k == minus:
-            dist -= 1
+            calib_step -= 1
         elif k == ord("m"):
             mode = "P" if mode == "V" else "V"
         else:
@@ -213,6 +216,73 @@ def get_snapshot(footage_filename):
     return extracted_img_filename
 
 
+def test_best_threshold(img, start, end, step):
+    """
+    displays the thresholded img with several values of threshold, starting from start to end with a step of step
+    (this function should be identifical between pool and power)
+    """
+    # # # # testing the best threshold
+    img_bck = np.copy(img)
+    i = 0
+    height = 200
+    width = 500
+    for t in range(start, end, step):
+        img = np.copy(img_bck)
+        _, img = cv2.threshold(img, t, 255, cv2.THRESH_BINARY)
+        if interactive: 
+            window_name = f"thresholded {t}"
+            flags = cv2.WINDOW_NORMAL & cv2.WINDOW_KEEPRATIO
+            #flags = cv2.WINDOW_AUTOSIZE
+            cv2.namedWindow(window_name, flags)
+            cv2.resizeWindow(window_name, width, height)
+            cv2.moveWindow(window_name, 10, 10 + i*(height+10))
+
+            cv2.imshow(window_name, img)
+            
+        i += 1
+    img_bck = np.copy(img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+
+def get_best_thresholded_img(img, basename, kind, best, step):
+    # Crop the image to focus on the interesting part
+    # best : best value so far
+    # step : step between 2 values of candidate best_threshold value
+    
+    start = best - 2*step
+    end = best + 2*step + 1
+        
+    if kind == "day":
+        cropped_img = np.copy(img[calib_day_y : calib_day_y + calib_day_height, calib_day_x : calib_day_x + calib_day_width])
+    elif kind == "night":
+        cropped_img = np.copy(img[calib_night_y : calib_night_y + calib_night_height, calib_night_x : calib_night_x + calib_night_width])
+    elif kind == "day_decimal":
+        cropped_img = np.copy(img[calib_day_decimal_y : calib_day_decimal_y + calib_day_decimal_height, calib_day_decimal_x : calib_day_decimal_x + calib_day_decimal_width])
+    elif kind == "night_decimal":
+        cropped_img = np.copy(img[calib_night_decimal_y : calib_night_decimal_y + calib_night_decimal_height, calib_night_decimal_x : calib_night_decimal_x + calib_night_decimal_width])
+    else:
+        logging.error(f'unexpected kind : {kind} !!')
+        
+    # save a copy of the cropped img for later analysis
+    img_name = basename + '_' + kind + '_cropped_gray1'
+    write_gray_to_file(img_name, cropped_img)
+
+    # if interactive: cv2.imshow("cropped_gray1", cropped_img); cv2.waitKey(0);
+    
+    debug_threshold = False
+    if debug_threshold:
+        test_best_threshold(cropped_img, start, end, step)
+    
+    best_threshold = best
+
+    # thresholding to get a black/white picture
+    _, cropped_img = cv2.threshold(cropped_img, best_threshold, 255, cv2.THRESH_BINARY)
+
+    # print("cv2.THRESH_BINARY : ", cv2.THRESH_BINARY)
+    return cropped_img
+
+
 def cropped_digits_power_img(filename):
     global interactive
 
@@ -232,81 +302,96 @@ def cropped_digits_power_img(filename):
     img = (255-img)
     # if interactive: cv2.imshow("greyed inverted", img)  #; cv2.waitKey(0)
 
-    # -------------
-    # day figures
-    # Crop the image to focus on the digits
-    img_day = img[calib_day_y:calib_day_y +
-                  calib_day_height, calib_day_x:calib_day_x+calib_day_width]
-    # if interactive: cv2.imshow("cropped img_day", img_day) ; #cv2.waitKey(0)
+    img_day = get_best_thresholded_img          (img, basename, "day",          60, 10)
+    img_night = get_best_thresholded_img        (img, basename, "night",        70, 10)
+    img_day_decimal = get_best_thresholded_img  (img, basename, "day_decimal",  80, 10)
+    img_night_decimal = get_best_thresholded_img(img, basename, "night_decimal",80, 10)
 
-    # # # testing the best threshold
+
+    # # -------------
+    # # day figures
+    # # Crop the image to focus on the digits
+    # img_day = img[calib_day_y:calib_day_y +
+    #               calib_day_height, calib_day_x:calib_day_x+calib_day_width]
+    # # if interactive: cv2.imshow("cropped img_day", img_day) ; #cv2.waitKey(0)
+
+    # # # # testing the best threshold
     # img_bck = np.copy(img_day)
     # for t in range(80, 180, 20):
     #     img_day = np.copy(img_bck)
     #     _, img_day = cv2.threshold(img_day, t, 255, cv2.THRESH_BINARY)
     #     if interactive: cv2.imshow(f"threshed {t}", img_day)
     # img_bck = np.copy(img_day)
-    # cv2.waitKey(0)
+    # keypressed = cv2.waitKey(0)
+    
+    # # print("keypressed : ", keypressed)    
+    # # if cv2.waitKey(1) & 0xFF == ord('x'):
+    # # break
 
-    best_threshold = 120
+    # best_threshold = 80
 
-    # thresholding to get a black/white picture
-    _, img_day = cv2.threshold(img_day, best_threshold, 255, cv2.THRESH_BINARY)
+    # # thresholding to get a black/white picture
+    # _, img_day = cv2.threshold(img_day, best_threshold, 255, cv2.THRESH_BINARY)
 
-    # -------------
-    # day_decimal
-    # Crop the image to focus on the digits
-    img_day_decimal = img[calib_day_dec_y:calib_day_dec_y+calib_day_dec_height,
-                          calib_day_dec_x:calib_day_dec_x+calib_day_dec_width]
-    # if interactive: cv2.imshow("cropped img_day_dec", img_day_dec_decimal) ; cv2.waitKey(0)
+    # # -------------
+    # # day_decimal
+    # # Crop the image to focus on the digits
+    # img_day_decimal = img[calib_day_dec_y:calib_day_dec_y+calib_day_dec_height,
+    #                       calib_day_dec_x:calib_day_dec_x+calib_day_dec_width]
+    # # if interactive: cv2.imshow("cropped img_day_dec", img_day_dec_decimal) ; cv2.waitKey(0)
 
-    # thresholding to get a black/white picture
-    _, img_day_decimal = cv2.threshold(
-        img_day_decimal, best_threshold, 255, cv2.THRESH_BINARY)
-    # if interactive: cv2.imshow("threshed day", img_day_decimal); cv2.waitKey(0)
+    # # thresholding to get a black/white picture
+    # _, img_day_decimal = cv2.threshold(
+    #     img_day_decimal, best_threshold, 255, cv2.THRESH_BINARY)
+    # # if interactive: cv2.imshow("threshed day", img_day_decimal); cv2.waitKey(0)
 
-    # -------------
-    # night figures
-    # Crop the image to focus on the digits
-    #img_night = img[530:570, 805:975]
-    img_night = img[calib_night_y:calib_night_y +
-                    calib_night_height, calib_night_x:calib_night_x+calib_night_width]
-    # if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
+    # # -------------
+    # # night figures
+    # # Crop the image to focus on the digits
+    # #img_night = img[530:570, 805:975]
+    # img_night = img[calib_night_y:calib_night_y +
+    #                 calib_night_height, calib_night_x:calib_night_x+calib_night_width]
+    # # if interactive: cv2.imshow("cropped", img_night)  #; cv2.waitKey(0)
 
-    # # testing the best threshold
-    # img_bck = np.copy(img_night)
-    # for t in range(80, 180, 20):
-    #     img_night = np.copy(img_bck)
-    #     _, img_night = cv2.threshold(img_night, t, 255, cv2.THRESH_BINARY)
-    #     if interactive: cv2.imshow(f"threshed {t}", img_night)
-    # img_bck = np.copy(img_night)
-    # cv2.waitKey(0)
+    # # # testing the best threshold
+    # # img_bck = np.copy(img_night)
+    # # for t in range(80, 180, 20):
+    # #     img_night = np.copy(img_bck)
+    # #     _, img_night = cv2.threshold(img_night, t, 255, cv2.THRESH_BINARY)
+    # #     if interactive: cv2.imshow(f"threshed {t}", img_night)
+    # # img_bck = np.copy(img_night)
+    # # cv2.waitKey(0)
 
-    best_threshold = 100
+    # best_threshold = 100
 
-    # thresholding to get a black/white picture
-    _, img_night = cv2.threshold(
-        img_night, best_threshold, 255, cv2.THRESH_BINARY)
-    # if interactive: cv2.imshow("threshed img_night", img_night)  #; cv2.waitKey(0)
+    # # thresholding to get a black/white picture
+    # _, img_night = cv2.threshold(
+    #     img_night, best_threshold, 255, cv2.THRESH_BINARY)
+    # # if interactive: cv2.imshow("threshed img_night", img_night)  #; cv2.waitKey(0)
 
-    # -------------
-    # night_decimal
-    # Crop the image to focus on the digits
-    img_night_decimal = img[calib_night_dec_y:calib_night_dec_y+calib_night_dec_height,
-                            calib_night_dec_x:calib_night_dec_x+calib_night_dec_width]
-    # if interactive: cv2.imshow("cropped img_night", img_night_decimal) ; cv2.waitKey(0)
+    # # -------------
+    # # night_decimal
+    # # Crop the image to focus on the digits
+    # img_night_decimal = img[calib_night_dec_y:calib_night_dec_y+calib_night_dec_height,
+    #                         calib_night_dec_x:calib_night_dec_x+calib_night_dec_width]
+    # # if interactive: cv2.imshow("cropped img_night", img_night_decimal) ; cv2.waitKey(0)
 
-    # thresholding to get a black/white picture
-    _, img_night_decimal = cv2.threshold(
-        img_night_decimal, best_threshold, 255, cv2.THRESH_BINARY)
-    # if interactive: cv2.imshow("threshed night", img_night_decimal); cv2.waitKey(0)
+    # # thresholding to get a black/white picture
+    # _, img_night_decimal = cv2.threshold(
+    #     img_night_decimal, best_threshold, 255, cv2.THRESH_BINARY)
+    # # if interactive: cv2.imshow("threshed night", img_night_decimal); cv2.waitKey(0)
 
-    # -------------
+    # # -------------
 
     return img_day, img_night, img_day_decimal, img_night_decimal
 
 
-def get_digits(img_name, img, options_list):
+def get_OCR_string(img_name, img, options_list):
+    """
+    return the string read by Tesseract in img with option_list as tesseract options and img_name the label of the image
+    (this function should be identifical between pool and power)
+
+    """
     # reads digits from picture
     # if interactive: cv2.imshow("cropped digits", img)
     temp_filename = img_name+".jpg"
@@ -599,7 +684,7 @@ def collect_candidate_results(img, kind, basename):
     # if interactive: cv2.imshow("cropped digits", img); cv2.waitKey
 
     # extract the figures from this plain image
-    res1 = get_digits(img_name, img, options_list)
+    res1 = get_OCR_string(img_name, img, options_list)
     candidate_results.append([kind + " tess. not optimised", res1])
     # if interactive: print("tesseract not optimised : ",res1)
     # if interactive: cv2.imshow("not optimised", img)
@@ -614,7 +699,7 @@ def collect_candidate_results(img, kind, basename):
     write_gray_to_file(img_name, img)
 
     # extract the figures from this optimised image
-    res2 = get_digits(img_name, img, options_list)
+    res2 = get_OCR_string(img_name, img, options_list)
     candidate_results.append([kind + " tess. optimised", res2])
     # if interactive: print("tesseract  optimised : ",res1)
     # if interactive: cv2.imshow("optimised", img)
@@ -657,8 +742,7 @@ def check_power(webcam):
         else:
             filename = "tmp_"+basename+'.jpg'
             filename_bak = "tmp_"+basename+'.bak.jpg'
-            img_day, img_night, img_day_decimal, img_night_decimal = \
-                cropped_digits_power_img(filename)
+            img_day, img_night, img_day_decimal, img_night_decimal = cropped_digits_power_img(filename)
             os.rename(filename, filename_bak)
 
         if interactive:
@@ -821,6 +905,7 @@ def main():
     logging.info("-----------------------------------------------------------")
     logging.info("Starting power")
 
+    do_calibration = False
     nb_args = len(sys.argv)
     logging.info(f'Number of arguments: {nb_args} arguments.')
     logging.info(f'Argument List: {str(sys.argv)}')
@@ -828,9 +913,12 @@ def main():
         arg1 = sys.argv[1]
         logging.info(f"arg1 = {arg1}")
         if arg1 == "calib":
-            calibration_power_day()
+            do_calibration = True
         else:
             print_usage()
+
+    if do_calibration or params.do_calibration:
+        calibration_power_day()
 
     day, night = check_power(webcam)
     if day != None or night != None:
