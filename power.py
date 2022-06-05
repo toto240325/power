@@ -43,14 +43,12 @@ import utils
 import params
 # from audioop import add
 
-# export DISPLAY=localhost:xx.0
-os.environ["DISPLAY"] = "localhost:10.0"
-print(os.environ["DISPLAY"] +
-      " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
-
+# # export DISPLAY=localhost:xx.0
+# os.environ["DISPLAY"] = "localhost:10.0"
+# print(os.environ["DISPLAY"] +
+#       " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
+# os.environ["DISPLAY"] = f'localhost:{params.display}.0'
 webcam = params.webcam
-
-calib_step = params.calib_step
 
 calib_day_x = params.calib_day_x
 calib_day_y = params.calib_day_y
@@ -62,15 +60,27 @@ calib_night_y = params.calib_night_y
 calib_night_width = params.calib_night_width
 calib_night_height = params.calib_night_height
 
-calib_day_decimal_x = params.calib_day_decimal_x
-calib_day_decimal_y = params.calib_day_decimal_y
-calib_day_decimal_width = params.calib_day_decimal_width
-calib_day_decimal_height = params.calib_day_decimal_height
+calib_day_dec_x = params.calib_day_dec_x
+calib_day_dec_y = params.calib_day_dec_y
+calib_day_dec_width = params.calib_day_dec_width
+calib_day_dec_height = params.calib_day_dec_height
 
-calib_night_decimal_x = params.calib_night_decimal_x
-calib_night_decimal_y = params.calib_night_decimal_y
-calib_night_decimal_width = params.calib_night_decimal_width
-calib_night_decimal_height = params.calib_night_decimal_height
+calib_night_dec_x = params.calib_night_dec_x
+calib_night_dec_y = params.calib_night_dec_y
+calib_night_dec_width = params.calib_night_dec_width
+calib_night_dec_height = params.calib_night_dec_height
+
+
+def set_display():
+    filename = "/home/toto/.display"
+    if os.path.isfile(filename):
+        f = open(filename, "r")
+        display = f.readline()
+        print(f'display read in {filename} : {display}')
+        f.close()
+    else:
+        display = 10
+    os.environ["DISPLAY"] = display.strip()
 
 
 def set_calibration(title, img, x, y, width, height):
@@ -79,7 +89,7 @@ def set_calibration(title, img, x, y, width, height):
     of the rectangle
     (this function should be identifical between pool and power)
     """
-    calib_step = 3  # calib_stepance (in pixels) to move the rectangle with each move
+    calib_step = params.calib_step  # calib_stepance (in pixels) to move the rectangle with each move
     mode = "P"   # P: arrows change position    S: arrows change size
     window_name = title
     flags = cv2.WINDOW_NORMAL & cv2.WINDOW_KEEPRATIO
@@ -222,6 +232,7 @@ def test_best_threshold(img, start, end, step):
     (this function should be identifical between pool and power)
     """
     # # # # testing the best threshold
+    set_display()
     img_bck = np.copy(img)
     i = 0
     height = 200
@@ -257,10 +268,10 @@ def get_best_thresholded_img(img, basename, kind, best, step):
         cropped_img = np.copy(img[calib_day_y : calib_day_y + calib_day_height, calib_day_x : calib_day_x + calib_day_width])
     elif kind == "night":
         cropped_img = np.copy(img[calib_night_y : calib_night_y + calib_night_height, calib_night_x : calib_night_x + calib_night_width])
-    elif kind == "day_decimal":
-        cropped_img = np.copy(img[calib_day_decimal_y : calib_day_decimal_y + calib_day_decimal_height, calib_day_decimal_x : calib_day_decimal_x + calib_day_decimal_width])
-    elif kind == "night_decimal":
-        cropped_img = np.copy(img[calib_night_decimal_y : calib_night_decimal_y + calib_night_decimal_height, calib_night_decimal_x : calib_night_decimal_x + calib_night_decimal_width])
+    elif kind == "day_dec":
+        cropped_img = np.copy(img[calib_day_dec_y : calib_day_dec_y + calib_day_dec_height, calib_day_dec_x : calib_day_dec_x + calib_day_dec_width])
+    elif kind == "night_dec":
+        cropped_img = np.copy(img[calib_night_dec_y : calib_night_dec_y + calib_night_dec_height, calib_night_dec_x : calib_night_dec_x + calib_night_dec_width])
     else:
         logging.error(f'unexpected kind : {kind} !!')
         
@@ -270,8 +281,7 @@ def get_best_thresholded_img(img, basename, kind, best, step):
 
     # if interactive: cv2.imshow("cropped_gray1", cropped_img); cv2.waitKey(0);
     
-    debug_threshold = False
-    if debug_threshold:
+    if params.calib_reset_threshold:
         test_best_threshold(cropped_img, start, end, step)
     
     best_threshold = best
@@ -302,10 +312,10 @@ def cropped_digits_power_img(filename):
     img = (255-img)
     # if interactive: cv2.imshow("greyed inverted", img)  #; cv2.waitKey(0)
 
-    img_day = get_best_thresholded_img          (img, basename, "day",          60, 10)
-    img_night = get_best_thresholded_img        (img, basename, "night",        70, 10)
-    img_day_decimal = get_best_thresholded_img  (img, basename, "day_decimal",  80, 10)
-    img_night_decimal = get_best_thresholded_img(img, basename, "night_decimal",80, 10)
+    img_day = get_best_thresholded_img      (img, basename, "day",       params.threshold_day,       10)
+    img_night = get_best_thresholded_img    (img, basename, "night",     params.threshold_night,     10)
+    img_day_dec = get_best_thresholded_img  (img, basename, "day_dec",   params.threshold_day_dec,   10)
+    img_night_dec = get_best_thresholded_img(img, basename, "night_dec", params.threshold_night_dec, 10)
 
 
     # # -------------
@@ -334,16 +344,16 @@ def cropped_digits_power_img(filename):
     # _, img_day = cv2.threshold(img_day, best_threshold, 255, cv2.THRESH_BINARY)
 
     # # -------------
-    # # day_decimal
+    # # day_dec
     # # Crop the image to focus on the digits
-    # img_day_decimal = img[calib_day_dec_y:calib_day_dec_y+calib_day_dec_height,
+    # img_day_dec = img[calib_day_dec_y:calib_day_dec_y+calib_day_dec_height,
     #                       calib_day_dec_x:calib_day_dec_x+calib_day_dec_width]
-    # # if interactive: cv2.imshow("cropped img_day_dec", img_day_dec_decimal) ; cv2.waitKey(0)
+    # # if interactive: cv2.imshow("cropped img_day_dec", img_day_dec_dec) ; cv2.waitKey(0)
 
     # # thresholding to get a black/white picture
-    # _, img_day_decimal = cv2.threshold(
-    #     img_day_decimal, best_threshold, 255, cv2.THRESH_BINARY)
-    # # if interactive: cv2.imshow("threshed day", img_day_decimal); cv2.waitKey(0)
+    # _, img_day_dec = cv2.threshold(
+    #     img_day_dec, best_threshold, 255, cv2.THRESH_BINARY)
+    # # if interactive: cv2.imshow("threshed day", img_day_dec); cv2.waitKey(0)
 
     # # -------------
     # # night figures
@@ -370,20 +380,20 @@ def cropped_digits_power_img(filename):
     # # if interactive: cv2.imshow("threshed img_night", img_night)  #; cv2.waitKey(0)
 
     # # -------------
-    # # night_decimal
+    # # night_dec
     # # Crop the image to focus on the digits
-    # img_night_decimal = img[calib_night_dec_y:calib_night_dec_y+calib_night_dec_height,
+    # img_night_dec = img[calib_night_dec_y:calib_night_dec_y+calib_night_dec_height,
     #                         calib_night_dec_x:calib_night_dec_x+calib_night_dec_width]
-    # # if interactive: cv2.imshow("cropped img_night", img_night_decimal) ; cv2.waitKey(0)
+    # # if interactive: cv2.imshow("cropped img_night", img_night_dec) ; cv2.waitKey(0)
 
     # # thresholding to get a black/white picture
-    # _, img_night_decimal = cv2.threshold(
-    #     img_night_decimal, best_threshold, 255, cv2.THRESH_BINARY)
-    # # if interactive: cv2.imshow("threshed night", img_night_decimal); cv2.waitKey(0)
+    # _, img_night_dec = cv2.threshold(
+    #     img_night_dec, best_threshold, 255, cv2.THRESH_BINARY)
+    # # if interactive: cv2.imshow("threshed night", img_night_dec); cv2.waitKey(0)
 
     # # -------------
 
-    return img_day, img_night, img_day_decimal, img_night_decimal
+    return img_day, img_night, img_day_dec, img_night_dec
 
 
 def get_OCR_string(img_name, img, options_list):
@@ -467,7 +477,7 @@ def last_validated_value(categ):
     return validated_value
 
 
-def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
+def get_best_result(candidate_results, img, kind, optional_non_dec_part):
     """
     results is an array of [label_str, result_str] (ex: ["tesseract optimised","743 423"])
     - create a list with only the valid results (format must be "999 999", after having removed any dot ("."))
@@ -481,7 +491,7 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
             store the problematic image for later analysis in issues/ambiguous-<datetime>
             return first day,night in the list
 
-    - kind is the kind of image at stake : "day", "night", "day_decimal", "night_decimal"
+    - kind is the kind of image at stake : "day", "night", "day_dec", "night_dec"
     """
 
     x = datetime.datetime.now()
@@ -515,22 +525,22 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                 if last_validated_val != None:
                     if (params.manual_mode and number >= params.manual_night and number <= params.manual_night+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+2):
                         valid_results.append(int(st))
-            elif kind == "day_decimal":
+            elif kind == "day_dec":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_day")
-                # prev_decimal_part = round((last_validated_val % 1) * 10)
+                # prev_dec_part = round((last_validated_val % 1) * 10)
                 if number >= 0 and number <= 9:
-                    if optional_non_decimal_part != None:
-                        candidate_full_value = optional_non_decimal_part + number/10
+                    if optional_non_dec_part != None:
+                        candidate_full_value = optional_non_dec_part + number/10
                         if candidate_full_value >= last_validated_val:
                             valid_results.append(int(st))
-            elif kind == "night_decimal":
+            elif kind == "night_dec":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_night")
-                # prev_decimal_part = round((last_validated_val % 1) * 10)
+                # prev_dec_part = round((last_validated_val % 1) * 10)
                 if number >= 0 and number <= 9:
-                    if optional_non_decimal_part != None:
-                        candidate_full_value = optional_non_decimal_part + number/10
+                    if optional_non_dec_part != None:
+                        candidate_full_value = optional_non_dec_part + number/10
                         if candidate_full_value >= last_validated_val:
                             valid_results.append(int(st))
 
@@ -546,7 +556,7 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
         best_candidate = None
         # print("No valid results !")
         # store image for later analysis :
-        filename = issues_path + "noresult_decimal_" + now_str + ".jpg"
+        filename = issues_path + now_str + "_" + kind + "_noresult_dec.jpg"
         cv2.imwrite(filename, img)
     else:
         # at least one valid result; first one is kept, unless we find another one which is closer to the last_validated_val
@@ -569,7 +579,7 @@ def get_best_result(candidate_results, img, kind, optional_non_decimal_part):
                     all_candidates = all_candidates + "_" + str(candidate)
             logging.info(f'more than 1 valid result : {all_candidates}')
             # store image for later analysis :
-            filename = issues_path + "ambiguous_" + all_candidates + "_" + now_str + ".jpg"
+            filename = issues_path + now_str + "_ambiguous_" + kind + "_" + all_candidates + ".jpg"
             cv2.imwrite(filename, img)
 
     return best_candidate
@@ -742,7 +752,7 @@ def check_power(webcam):
         else:
             filename = "tmp_"+basename+'.jpg'
             filename_bak = "tmp_"+basename+'.bak.jpg'
-            img_day, img_night, img_day_decimal, img_night_decimal = cropped_digits_power_img(filename)
+            img_day, img_night, img_day_dec, img_night_dec = cropped_digits_power_img(filename)
             os.rename(filename, filename_bak)
 
         if interactive:
@@ -758,14 +768,14 @@ def check_power(webcam):
 
         # ---- day decimal part ----------
         candidate_results = collect_candidate_results(
-            img_day_decimal, "day_decimal", basename)
+            img_day_dec, "day_dec", basename)
         if interactive:
             display_candidate_results(candidate_results)
         # it makes sense to try and identify the decimal part only if a non-decimal part has been found
         if day != None:
-            day_decimal = get_best_result(
-                candidate_results, img_day_decimal, "day_decimal", day)
-            # if interactive: print("day_decimal : ", day_decimal)
+            day_dec = get_best_result(
+                candidate_results, img_day_dec, "day_dec", day)
+            # if interactive: print("day_dec : ", day_dec)
 
         if interactive:
             print("----------------------")
@@ -781,14 +791,14 @@ def check_power(webcam):
 
         # ---- night decimal part ----------
         candidate_results = collect_candidate_results(
-            img_night_decimal, "night_decimal", basename)
+            img_night_dec, "night_dec", basename)
         if interactive:
             display_candidate_results(candidate_results)
         if night != None:
             # it makes sense to try and identify the decimal part only if a non-decimal part has been found
-            night_decimal = get_best_result(
-                candidate_results, img_night_decimal, "night_decimal", night)
-            # if interactive: print("night_decimal : ", night_decimal)
+            night_dec = get_best_result(
+                candidate_results, img_night_dec, "night_dec", night)
+            # if interactive: print("night_dec : ", night_dec)
 
         if interactive:
             print("")
@@ -796,13 +806,13 @@ def check_power(webcam):
         # --------------------------
 
         if day != None:
-            if day_decimal != None:
-                day = day + day_decimal/10
+            if day_dec != None:
+                day = day + day_dec/10
             create_event("power_day", str(day))
 
         if night != None:
-            if night_decimal != None:
-                night = night + night_decimal/10
+            if night_dec != None:
+                night = night + night_dec/10
             create_event("power_night", str(night))
 
         # if night != None:
@@ -823,6 +833,8 @@ def calibration_power_day():
     global calib_night_x, calib_night_y, calib_night_width, calib_night_height
     global calib_day_dec_x, calib_day_dec_y, calib_day_dec_width, calib_day_dec_height
     global calib_night_dec_x, calib_night_dec_y, calib_night_dec_width, calib_night_dec_height
+
+    set_display()
 
     basename = "power"
     footage_filename = get_cam_footage(basename, webcam)
