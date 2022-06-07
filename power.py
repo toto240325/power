@@ -79,7 +79,7 @@ def set_display():
         print(f'display read in {filename} : {display}')
         f.close()
     else:
-        display = 10
+        display = "10"
     os.environ["DISPLAY"] = display.strip()
 
 
@@ -226,7 +226,7 @@ def get_snapshot(footage_filename):
     return extracted_img_filename
 
 
-def test_best_threshold(img, start, end, step):
+def test_best_threshold(kind, img, start, end, step):
     """
     displays the thresholded img with several values of threshold, starting from start to end with a step of step
     (this function should be identifical between pool and power)
@@ -241,7 +241,7 @@ def test_best_threshold(img, start, end, step):
         img = np.copy(img_bck)
         _, img = cv2.threshold(img, t, 255, cv2.THRESH_BINARY)
         if interactive: 
-            window_name = f"thresholded {t}"
+            window_name = f"{kind} - thresholded {t}"
             flags = cv2.WINDOW_NORMAL & cv2.WINDOW_KEEPRATIO
             #flags = cv2.WINDOW_AUTOSIZE
             cv2.namedWindow(window_name, flags)
@@ -282,7 +282,7 @@ def get_best_thresholded_img(img, basename, kind, best, step):
     # if interactive: cv2.imshow("cropped_gray1", cropped_img); cv2.waitKey(0);
     
     if params.calib_reset_threshold:
-        test_best_threshold(cropped_img, start, end, step)
+        test_best_threshold(kind, cropped_img, start, end, step)
     
     best_threshold = best
 
