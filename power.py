@@ -503,8 +503,8 @@ def get_best_result(candidate_results, img, kind, optional_non_dec_part):
     # manual_mode = True (in parameters.py) if the figures are reset/checked manually after an interruption of the normal series
 
     for c in candidate_results:
-        if interactive:
-            print(f'{c[0]:35}: {c[1]}')
+        # if interactive:
+        #     print(f'{c[0]:35}: {c[1]}')
         st = c[1].strip().replace(" ", "")
         st = st.strip().replace(".", "")
         if len(st) >= 1 and st != "." and st.isnumeric:
@@ -516,14 +516,14 @@ def get_best_result(candidate_results, img, kind, optional_non_dec_part):
                 # if number > 71000 and number < 72000:
                 if last_validated_val != None:
                     truncated = int(last_validated_val)
-                    if (params.manual_mode and number >= params.manual_day and number <= params.manual_day+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+3):
+                    if (params.manual_mode and number >= params.manual_day and number <= params.manual_day+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+4):
                         valid_results.append(int(st))
             elif kind == "night":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_night")
                 # if number > 65000 and number < 67000:
                 if last_validated_val != None:
-                    if (params.manual_mode and number >= params.manual_night and number <= params.manual_night+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+3):
+                    if (params.manual_mode and number >= params.manual_night and number <= params.manual_night+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+4):
                         valid_results.append(int(st))
             elif kind == "day_dec":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
@@ -722,6 +722,7 @@ def display_candidate_results(candidate_results):
     for c in candidate_results:
         if interactive:
             print(f'{c[0]:35}: {c[1]}')
+    print()
 
 
 def check_power(webcam):
