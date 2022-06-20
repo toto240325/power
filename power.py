@@ -49,6 +49,8 @@ import params
 #       " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
 # os.environ["DISPLAY"] = f'localhost:{params.display}.0'
 webcam = params.webcam
+jpg_path = "jpg/"
+issues_path = "issues/"
 
 calib_day_x = params.calib_day_x
 calib_day_y = params.calib_day_y
@@ -206,7 +208,7 @@ def get_snapshot(footage_filename):
     # extract a picture from that video
     process = subprocess.run(
         ['ffmpeg', '-y', '-i', f'{basename}.h264',
-            '-frames:v', '1', f'{basename}.jpg'],
+            '-frames:v', '1', f'{jpg_path}{basename}.jpg'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True)
@@ -217,9 +219,9 @@ def get_snapshot(footage_filename):
     # print("----stdout = ", my_stdout)
     # print("----err = ", err)
 
-    if os.path.isfile(f'{basename}.jpg'):
+    if os.path.isfile(f'{jpg_path}{basename}.jpg'):
         os.rename(f'{basename}.h264', f'{basename}.bak.h264')
-        extracted_img_filename = f'{basename}.jpg'
+        extracted_img_filename = f'{jpg_path}{basename}.jpg'
     else:
         extracted_img_filename = None
 
@@ -404,7 +406,7 @@ def get_OCR_string(img_name, img, options_list):
     """
     # reads digits from picture
     # if interactive: cv2.imshow("cropped digits", img)
-    temp_filename = img_name+".jpg"
+    temp_filename = jpg_path + img_name+".jpg"
     temp_output_filename = "tmp_output.txt"
     cv2.imwrite(temp_filename, img)
 
@@ -516,7 +518,7 @@ def get_best_result(candidate_results, img, kind, optional_non_dec_part):
                 # if number > 71000 and number < 72000:
                 if last_validated_val != None:
                     truncated = int(last_validated_val)
-                    if (params.manual_mode and number >= params.manual_day and number <= params.manual_day+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+4):
+                    if (params.manual_mode and number >= params.manual_day and number <= params.manual_day+1) or (number >= int(last_validated_val)-2 and number <= last_validated_val+3):
                         valid_results.append(int(st))
             elif kind == "night":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
@@ -546,10 +548,6 @@ def get_best_result(candidate_results, img, kind, optional_non_dec_part):
 
     # remove duplicates from list of valid results
     valid_results = list(dict.fromkeys(valid_results))
-
-    issues_path = "issues/"
-    if not os.path.isdir(issues_path):
-        os.mkdir(issues_path)
 
     if len(valid_results) == 0:
         # no valid results; store image for later analysis
@@ -668,7 +666,7 @@ def write_gray_to_file(img_name, img):
     takes a gray image and write it to disk
     """
     img_to_save = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    cv2.imwrite(img_name + ".jpg", img_to_save)
+    cv2.imwrite(jpg_path + img_name + ".jpg", img_to_save)
 
 
 def collect_candidate_results(img, kind, basename):
@@ -747,12 +745,12 @@ def check_power(webcam):
     if successful:
         debug = False
         if debug:
-            filename = "threshed_chalet1.jpg"
+            filename = jpg_path + "threshed_chalet1.jpg"
             img = cv2.imread(filename)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         else:
-            filename = "tmp_"+basename+'.jpg'
-            filename_bak = "tmp_"+basename+'.bak.jpg'
+            filename = jpg_path + "tmp_"+basename+'.jpg'
+            filename_bak = jpg_path + "tmp_"+basename+'.bak.jpg'
             img_day, img_night, img_day_dec, img_night_dec = cropped_digits_power_img(filename)
             os.rename(filename, filename_bak)
 
@@ -912,11 +910,23 @@ def print_usage():
     print(" python power.py calib   : recalibrate the cropping of the image")
     print(" python power.py anythingelse : print this usage")
 
+def check_necessary_dirs():
+    """
+    create the necessary folders if not yet exist
+    """
+    if not os.path.isdir(issues_path):
+        os.mkdir(issues_path)
+
+    if not os.path.isdir(jpg_path):
+        os.mkdir(jpg_path)
+
 
 def main():
     utils.init_logger('INFO')
     logging.info("-----------------------------------------------------------")
     logging.info("Starting power")
+
+    check_necessary_dirs()
 
     do_calibration = False
     nb_args = len(sys.argv)
