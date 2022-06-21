@@ -518,14 +518,16 @@ def get_best_result(candidate_results, img, kind, optional_non_dec_part):
                 # if number > 71000 and number < 72000:
                 if last_validated_val != None:
                     truncated = int(last_validated_val)
-                    if (params.manual_mode and number >= params.manual_day and number <= params.manual_day+1) or (number >= int(last_validated_val)-2 and number <= last_validated_val+3):
+                    if (params.manual_mode and number >= params.manual_day and number <= params.manual_day + 1) or \
+                       (number >= int(last_validated_val)- 1 and number <= last_validated_val + 2):
                         valid_results.append(int(st))
             elif kind == "night":
                 # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
                 last_validated_val = last_validated_value("power_night")
                 # if number > 65000 and number < 67000:
                 if last_validated_val != None:
-                    if (params.manual_mode and number >= params.manual_night and number <= params.manual_night+1) or (number >= int(last_validated_val)-1 and number <= last_validated_val+4):
+                    if (params.manual_mode and number >= params.manual_night and number <= params.manual_night + 1) or \
+                       (number >= int(last_validated_val)-1 and number <= last_validated_val + 2):
                         valid_results.append(int(st))
             elif kind == "day_dec":
                 # # first get the last validated measure (the strong assumption is that we store only validated values in the DB !!)
@@ -728,6 +730,8 @@ def check_power(webcam):
     global interactive
 
     basename = "power_base"
+    day_dec = None
+    night_dec = None
 
     successful = False
     i = 1
@@ -765,19 +769,19 @@ def check_power(webcam):
         if interactive:
             print("")
 
-        # ---- day decimal part ----------
-        candidate_results = collect_candidate_results(
-            img_day_dec, "day_dec", basename)
-        if interactive:
-            display_candidate_results(candidate_results)
-        # it makes sense to try and identify the decimal part only if a non-decimal part has been found
-        if day != None:
-            day_dec = get_best_result(
-                candidate_results, img_day_dec, "day_dec", day)
-            # if interactive: print("day_dec : ", day_dec)
+        # # ---- day decimal part ----------
+        # candidate_results = collect_candidate_results(
+        #     img_day_dec, "day_dec", basename)
+        # if interactive:
+        #     display_candidate_results(candidate_results)
+        # # it makes sense to try and identify the decimal part only if a non-decimal part has been found
+        # if day != None:
+        #     day_dec = get_best_result(
+        #         candidate_results, img_day_dec, "day_dec", day)
+        #     # if interactive: print("day_dec : ", day_dec)
 
-        if interactive:
-            print("----------------------")
+        # if interactive:
+        #     print("----------------------")
 
         # ---- night ----------
         candidate_results = collect_candidate_results(
@@ -788,19 +792,19 @@ def check_power(webcam):
         if interactive:
             print("")
 
-        # ---- night decimal part ----------
-        candidate_results = collect_candidate_results(
-            img_night_dec, "night_dec", basename)
-        if interactive:
-            display_candidate_results(candidate_results)
-        if night != None:
-            # it makes sense to try and identify the decimal part only if a non-decimal part has been found
-            night_dec = get_best_result(
-                candidate_results, img_night_dec, "night_dec", night)
-            # if interactive: print("night_dec : ", night_dec)
+        # # ---- night decimal part ----------
+        # candidate_results = collect_candidate_results(
+        #     img_night_dec, "night_dec", basename)
+        # if interactive:
+        #     display_candidate_results(candidate_results)
+        # if night != None:
+        #     # it makes sense to try and identify the decimal part only if a non-decimal part has been found
+        #     night_dec = get_best_result(
+        #         candidate_results, img_night_dec, "night_dec", night)
+        #     # if interactive: print("night_dec : ", night_dec)
 
-        if interactive:
-            print("")
+        # if interactive:
+        #     print("")
 
         # --------------------------
 
