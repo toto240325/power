@@ -49,7 +49,7 @@ import params
 #       " (don't forget to run an Xterm on your laptop and set DISPLAY to the right value (for Ubuntu2 !))")
 # os.environ["DISPLAY"] = f'localhost:{params.display}.0'
 webcam = params.webcam
-jpg_path = "jpg/"
+pict_path = "pict/"
 issues_path = "issues/"
 
 calib_day_x = params.calib_day_x
@@ -197,7 +197,7 @@ def get_cam_footage(basename, webcam):
 
 def get_snapshot(footage_filename):
     """
-    extract a snapshot from <basename>.h264 and put it in <basename>.jpg
+    extract a snapshot from <basename>.h264 and put it in <basename>.png
     (this function should be identifical between pool and power)
     """
 
@@ -208,7 +208,7 @@ def get_snapshot(footage_filename):
     # extract a picture from that video
     process = subprocess.run(
         ['ffmpeg', '-y', '-i', f'{basename}.h264',
-            '-frames:v', '1', f'{jpg_path}{basename}.jpg'],
+            '-frames:v', '1', f'{pict_path}{basename}.png'],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True)
@@ -219,9 +219,9 @@ def get_snapshot(footage_filename):
     # print("----stdout = ", my_stdout)
     # print("----err = ", err)
 
-    if os.path.isfile(f'{jpg_path}{basename}.jpg'):
+    if os.path.isfile(f'{pict_path}{basename}.png'):
         os.rename(f'{basename}.h264', f'{basename}.bak.h264')
-        extracted_img_filename = f'{jpg_path}{basename}.jpg'
+        extracted_img_filename = f'{pict_path}{basename}.png'
     else:
         extracted_img_filename = None
 
@@ -406,7 +406,7 @@ def get_OCR_string(img_name, img, options_list):
     """
     # reads digits from picture
     # if interactive: cv2.imshow("cropped digits", img)
-    temp_filename = jpg_path + img_name+".jpg"
+    temp_filename = pict_path + img_name+".png"
     temp_output_filename = "tmp_output.txt"
     cv2.imwrite(temp_filename, img)
 
@@ -556,7 +556,7 @@ def get_best_result(candidate_results, img, kind, optional_non_dec_part):
         best_candidate = None
         # print("No valid results !")
         # store image for later analysis :
-        filename = issues_path + now_str + "_" + kind + "_noresult_dec.jpg"
+        filename = issues_path + now_str + "_" + kind + "_noresult_dec.png"
         cv2.imwrite(filename, img)
     else:
         # at least one valid result; first one is kept, unless we find another one which is closer to the last_validated_val
@@ -579,7 +579,7 @@ def get_best_result(candidate_results, img, kind, optional_non_dec_part):
                     all_candidates = all_candidates + "_" + str(candidate)
             logging.info(f'more than 1 valid result : {all_candidates}')
             # store image for later analysis :
-            filename = issues_path + now_str + "_ambiguous_" + kind + "_" + all_candidates + ".jpg"
+            filename = issues_path + now_str + "_ambiguous_" + kind + "_" + all_candidates + ".png"
             cv2.imwrite(filename, img)
 
     return best_candidate
@@ -607,7 +607,7 @@ def optimise_img(img):
     #     ],np.uint8)
 
     img = cv2.erode(img, kernel, iterations=2)
-    # cv2.imwrite("base_eroded.jpg", img)
+    # cv2.imwrite("base_eroded.png", img)
     # if interactive: cv2.imshow("eroded", img)
 
     # invert the image again, since done at the beginning
@@ -668,7 +668,7 @@ def write_gray_to_file(img_name, img):
     takes a gray image and write it to disk
     """
     img_to_save = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    cv2.imwrite(jpg_path + img_name + ".jpg", img_to_save)
+    cv2.imwrite(pict_path + img_name + ".png", img_to_save)
 
 
 def collect_candidate_results(img, kind, basename):
@@ -676,10 +676,10 @@ def collect_candidate_results(img, kind, basename):
     extract from img, of given kind ("day", "night", etc) all the possible candidates as 
     read string of numerical digits
     """
-    # NB : shlex.split('tesseract -c page_separator="" cropped_chalet.jpg stdout --psm 13')
+    # NB : shlex.split('tesseract -c page_separator="" cropped_chalet.png stdout --psm 13')
     options_str = "--psm 13 -c tessedit_char_whitelist='.0123456789 '"
     #options_str="--psm 6 -c tessedit_char_whitelist='.0123456789 '"
-    # shlex.split('tesseract -c page_separator="" cropped_chalet.jpg stdout --psm 13')
+    # shlex.split('tesseract -c page_separator="" cropped_chalet.png stdout --psm 13')
     options_list = shlex.split(options_str)
 
     candidate_results = []
@@ -749,12 +749,12 @@ def check_power(webcam):
     if successful:
         debug = False
         if debug:
-            filename = jpg_path + "threshed_chalet1.jpg"
+            filename = pict_path + "threshed_chalet1.png"
             img = cv2.imread(filename)
             img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         else:
-            filename = jpg_path + "tmp_"+basename+'.jpg'
-            filename_bak = jpg_path + "tmp_"+basename+'.bak.jpg'
+            filename = pict_path + "tmp_"+basename+'.png'
+            filename_bak = pict_path + "tmp_"+basename+'.bak.png'
             img_day, img_night, img_day_dec, img_night_dec = cropped_digits_power_img(filename)
             os.rename(filename, filename_bak)
 
@@ -921,8 +921,8 @@ def check_necessary_dirs():
     if not os.path.isdir(issues_path):
         os.mkdir(issues_path)
 
-    if not os.path.isdir(jpg_path):
-        os.mkdir(jpg_path)
+    if not os.path.isdir(pict_path):
+        os.mkdir(pict_path)
 
 
 def main():
